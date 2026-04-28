@@ -1,15 +1,19 @@
 import "../styles/globals.css";
 
+const title = "Yunus Eş";
+const description =
+  "Yazılımcı, CodeCube kurucusu. Dijital ürünler tasarlıyor ve hayata geçiriyor.";
+
 export const metadata = {
   metadataBase: new URL("https://yunuses.com"),
   title: "Yunus Eş",
-  description: "Kişisel websitesi",
+  description,
   icons: { icon: "/favicon.ico" },
   openGraph: {
     type: "website",
-    siteName: "Yunus Eş",
-    title: "Yunus Eş",
-    description: "Kişisel websitesi",
+    siteName: title,
+    title,
+    description,
     url: "/",
     images: [
       {
@@ -24,8 +28,8 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     site: "@codesignist",
-    title: "Yunus Eş",
-    description: "Kişisel websitesi",
+    title,
+    description,
     images: ["/og-image.png"],
   },
   other: {
