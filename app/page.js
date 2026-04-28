@@ -3,7 +3,6 @@ import Link from "next/link";
 
 const stack = ["React", "Next.js", "Node.js", "MongoDB", "TypeScript"];
 
-
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">

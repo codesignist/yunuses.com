@@ -4,6 +4,17 @@ import LessonsMap from "components/organisms/LessonsMap";
 import lessons from "data/lessons.json";
 import types from "data/types.json";
 
+export const metadata = {
+  title: "Zero to Hero — Yunus Eş",
+  description:
+    "Sıfırdan FrontEnd Developer'lığa: 1 Ağustos 2022'de başlayıp tamamlanan ücretsiz uygulamalı eğitim programı.",
+  openGraph: {
+    title: "Zero to Hero — Yunus Eş",
+    description:
+      "Sıfırdan FrontEnd Developer'lığa: 1 Ağustos 2022'de başlayıp tamamlanan ücretsiz uygulamalı eğitim programı.",
+  },
+};
+
 const H2 = ({ children }) => (
   <h2 className="mt-16 mb-6 text-xl font-medium tracking-tight text-fg">
     {children}
