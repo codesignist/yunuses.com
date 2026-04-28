@@ -25,7 +25,7 @@ export default function App({ Component, pageProps }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:alt" content="Yunus Eş — Full Stack Developer, CodeCube Software Kurucusu" />
+        <meta property="og:image:alt" content="Yunus Eş — CodeCube Kurucusu" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:site" content="@codesignist" />
         <meta name="twitter:title" content="Yunus Eş" />

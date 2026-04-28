@@ -8,21 +8,25 @@ export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
       <div className="w-full max-w-[560px] animate-fade-in-up">
-        <img
-          src="Avatar.png"
-          width={88}
-          height={88}
-          alt="Yunus Eş"
-          className="w-22 h-22 rounded-full object-cover"
-          style={{ width: 88, height: 88 }}
-        />
+        <div className="flex items-center gap-6 max-md:flex-col max-md:items-start max-md:gap-0">
+          <img
+            src="Avatar.png"
+            width={88}
+            height={88}
+            alt="Yunus Eş"
+            className="rounded-full object-cover shrink-0"
+            style={{ width: 88, height: 88 }}
+          />
 
-        <h1 className="mt-8 text-4xl font-medium tracking-tight text-fg max-md:text-3xl">
-          Yunus Eş
-        </h1>
-        <p className="mt-2 text-base text-muted">
-          Full Stack Developer · CodeCube Software Kurucusu
-        </p>
+          <div className="max-md:mt-8">
+            <h1 className="text-4xl font-medium tracking-tight text-fg max-md:text-3xl">
+              Yunus Eş
+            </h1>
+            <p className="mt-2 text-base text-muted">
+              CodeCube Kurucusu
+            </p>
+          </div>
+        </div>
 
         <div className="mt-10 space-y-5 text-[15px] leading-[1.7] text-muted">
           <p>
