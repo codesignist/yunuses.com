@@ -21,20 +21,18 @@ export default function Home() {
             <h1 className="text-4xl font-medium tracking-tight text-fg max-md:text-3xl">
               Yunus Eş
             </h1>
-            <p className="mt-2 text-base text-muted">
-              CodeCube Kurucusu
-            </p>
+            <p className="mt-2 text-base text-muted">CodeCube Kurucusu</p>
           </div>
         </div>
 
         <div className="mt-10 space-y-5 text-[15px] leading-[1.7] text-muted">
           <p>
-            25 yılı aşkın süredir yazılım dünyasının içerisindeyim. Bu süre boyunca
-            100&apos;ün üzerinde irili ufaklı projede, kimi zaman tek başıma, kimi
-            zaman da bir ekibin parçası olarak görev aldım. Kariyerimin ilk
-            yıllarında uzun süre ActionScript / Flash teknolojileriyle çalıştım.
-            2016 yılından bu yana ise React, Node.js ve MongoDB gibi modern web
-            teknolojileri üzerine çalışıyorum.
+            25 yılı aşkın süredir yazılım dünyasının içerisindeyim. Bu süre
+            boyunca 100&apos;ün üzerinde irili ufaklı projede, kimi zaman tek
+            başıma, kimi zaman da bir ekibin parçası olarak görev aldım.
+            Kariyerimin ilk yıllarında uzun süre ActionScript / Flash
+            teknolojileriyle çalıştım. 2016 yılından bu yana ise React, Node.js
+            ve MongoDB gibi modern web teknolojileri üzerine çalışıyorum.
           </p>
           <p>
             2024 yılının son çeyreğinde, edindiğim birikimi müşterilerimize daha
@@ -62,7 +60,7 @@ export default function Home() {
         <div className="mt-12 pt-8 border-t border-line">
           <SocialArea
             data={{
-              next_sosyal: "https://sosyal.teknofest.app/@codesignist",
+              next_sosyal: "https://nsosyal.com/codesignist",
               youtube: "https://www.youtube.com/yunuses",
               github: "https://github.com/codesignist",
               linkedin: "https://www.linkedin.com/in/codesignist/",
