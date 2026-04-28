@@ -18,7 +18,7 @@ const SVG = ({ children, ...props }) => (
 const icons = {
   next_sosyal: (props) => (
     <SVG {...props}>
-      <path d="M5 19V5l14 14V5" />
+      <path d="M21 18.5V3H15.62V13.13L11.74 3H3V21H8.37V10.8L11.64 19.31C12.06 20.3 13.22 21 14.51 21H18.72C19.86 21 21 19.78 21 18.5Z" />
     </SVG>
   ),
   youtube: (props) => (
