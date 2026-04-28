@@ -17,7 +17,7 @@ export const metadata = {
         width: 1200,
         height: 630,
         type: "image/png",
-        alt: "Yunus Eş — CodeCube Kurucusu",
+        alt: "Yunus Eş — Kurucu, CodeCube",
       },
     ],
   },

@@ -19,10 +19,10 @@ export default function Home() {
           />
 
           <div className="max-md:mt-8">
-            <h1 className="text-4xl font-medium tracking-tight text-fg max-md:text-3xl">
+            <h1 className="text-4xl font-medium tracking-tight leading-tight text-fg max-md:text-3xl">
               Yunus Eş
             </h1>
-            <p className="mt-2 text-base text-muted">CodeCube Kurucusu</p>
+            <p className="text-base text-muted">Kurucu, CodeCube</p>
           </div>
         </div>
 
