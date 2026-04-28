@@ -1,6 +1,6 @@
 # yunuses.com
 
-[Yunus Eş](https://yunuses.com)'in kişisel web sitesi. Next.js (Pages Router) + Tailwind CSS 4 ile geliştirilmiştir.
+[Yunus Eş](https://yunuses.com)'in kişisel web sitesi. Next.js (App Router) + Tailwind CSS 4 ile geliştirilmiştir.
 
 ## İçerik
 
@@ -34,24 +34,23 @@ pnpm build && pnpm start
 
 ```
 yunuses.com
+├── app              # layout.js, page.js, zero-to-hero/page.js
 ├── components
-│   ├── atoms        # Icon, LinkButton
+│   ├── atoms        # Icon, icons (registry), LinkButton
 │   ├── molecules    # Social, Lessons, Types
 │   └── organisms    # SocialArea, LessonsMap
 ├── data             # lessons.json, types.json
-├── pages            # _app.js, index.js, zero-to-hero.js
 ├── public           # statik varlıklar (Avatar, og-image, favicon, vs.)
-├── styles
-│   └── globals.css  # Tailwind CSS 4 + tema token'ları
-└── utils            # icomoon selection.json
+└── styles
+    └── globals.css  # Tailwind CSS 4 + tema token'ları
 ```
 
 ## Kullanılan Araçlar
 
-- **Next.js** — uygulama çatısı (Pages Router)
+- **Next.js** — uygulama çatısı (App Router)
 - **Tailwind CSS 4** — stil sistemi
 - **Geist & Geist Mono** — tipografi
-- **icomoon-react** — ikon seti
+- **Tabler Icons** (outline) — ikonlar inline SVG olarak `components/atoms/icons.js` registry'sinde tutulur
 
 ## Geliştirici
 

@@ -1,14 +1,16 @@
-import IcomoonReact from "icomoon-react";
-import iconSet from "../../utils/selection.json";
+import icons from "./icons";
 
-const Icon = ({ color, size = "100%", icon, className = "" }) => (
-  <IcomoonReact
-    className={className}
-    iconSet={iconSet}
-    color={color}
-    size={size}
-    icon={icon}
-  />
-);
+const Icon = ({ icon, size = 18, color, className = "" }) => {
+  const Component = icons[icon];
+  if (!Component) return null;
+  return (
+    <Component
+      width={size}
+      height={size}
+      className={className}
+      style={color ? { color } : undefined}
+    />
+  );
+};
 
 export default Icon;
