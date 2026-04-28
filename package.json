@@ -1,0 +1,39 @@
+{
+  "name": "yunuses.com",
+  "version": "1.0.0",
+  "description": "Yunus Eş — kişisel web sitesi",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codesignist/yunuses.com.git"
+  },
+  "keywords": [
+    "website",
+    "personal",
+    "nextjs"
+  ],
+  "author": "codesignist",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/codesignist/yunuses.com/issues"
+  },
+  "homepage": "https://yunuses.com",
+  "dependencies": {
+    "@tailwindcss/postcss": "^4",
+    "icomoon-react": "^3.0.0",
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "eslint": "^10.2.1",
+    "eslint-config-next": "^16.2.4"
+  }
+}
