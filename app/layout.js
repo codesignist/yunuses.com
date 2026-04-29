@@ -37,6 +37,11 @@ export const metadata = {
   other: {
     "fediverse:creator": "@codesignist@sosyal.teknofest.app",
   },
+  alternates: {
+    types: {
+      "application/rss+xml": "/feed.xml",
+    },
+  },
 };
 
 export const viewport = {
