@@ -101,7 +101,7 @@ export default function AvatarLightbox({ origin, onClose }) {
         }}
       >
         <Image
-          src="/Avatar.png"
+          src="/avatar.webp"
           width={BIG_TARGET}
           height={BIG_TARGET}
           alt="Yunus Eş"

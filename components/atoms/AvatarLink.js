@@ -34,7 +34,7 @@ export default function AvatarLink() {
         className="rounded-full shrink-0 inline-block animate-fade-in-up"
       >
         <Image
-          src="/Avatar.png"
+          src="/avatar.webp"
           width={88}
           height={88}
           alt="Yunus Eş"
