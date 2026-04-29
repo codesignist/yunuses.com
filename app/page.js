@@ -5,11 +5,44 @@ import SocialArea from "components/organisms/SocialArea";
 import { formatDate, getAllPosts } from "lib/posts";
 import Link from "next/link";
 
+const SITE_URL = "https://yunuses.com";
+
+const personSchema = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Yunus Eş",
+  alternateName: "codesignist",
+  url: SITE_URL,
+  image: `${SITE_URL}/avatar.webp`,
+  jobTitle: "Kurucu",
+  worksFor: {
+    "@type": "Organization",
+    name: "CodeCube Software",
+    url: "https://codecube.com.tr",
+  },
+  sameAs: [
+    "https://nsosyal.com/codesignist",
+    "https://www.youtube.com/yunuses",
+    "https://github.com/codesignist",
+    "https://www.linkedin.com/in/codesignist/",
+    "https://twitter.com/codesignist",
+    "https://www.instagram.com/codesignist",
+  ],
+};
+
+function jsonLd(schema) {
+  return JSON.stringify(schema).replace(/</g, "\\u003c");
+}
+
 export default function Home() {
   const latestPost = getAllPosts()[0];
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(personSchema) }}
+      />
       <CursorTrailLoader />
       <div className="w-full max-w-[560px]">
         <div className="flex items-center gap-6">

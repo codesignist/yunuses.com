@@ -3,6 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
 
+const SITE_URL = "https://yunuses.com";
+
+function jsonLd(schema) {
+  return JSON.stringify(schema).replace(/</g, "\\u003c");
+}
+
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
 }
@@ -33,8 +39,27 @@ export default async function PostPage({ params }) {
   const post = await getPostBySlug(slug);
   if (!post || post.draft) notFound();
 
+  const url = `${SITE_URL}/blog/${post.slug}/`;
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.summary,
+    datePublished: post.date,
+    dateModified: post.date,
+    url,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    author: { "@type": "Person", name: "Yunus Eş", url: SITE_URL },
+    publisher: { "@type": "Person", name: "Yunus Eş", url: SITE_URL },
+    image: `${SITE_URL}/og-image.png`,
+  };
+
   return (
     <main className="min-h-screen px-6 py-20 max-md:py-12 max-md:px-5">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(articleSchema) }}
+      />
       <article className="w-full max-w-[680px] mx-auto">
         <header className="mb-12 animate-fade-in-up">
           <Link
