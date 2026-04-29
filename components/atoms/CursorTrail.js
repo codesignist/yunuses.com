@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 
 const POINTS = 70;
-const ELASTIC_INNER = 0.1; // velocity'nin delta'ya yakınsama hızı — düşük = daha geç toparlanma, daha çok lag
-const ELASTIC_OUTER = 0.2; // tracker'ın velocity'yi ne kadar uyguladığı — yüksek = daha çok overshoot, daha yaylı
+const ELASTIC_INNER = 0.11; // velocity'nin delta'ya yakınsama hızı — düşük = daha geç toparlanma, daha çok lag
+const ELASTIC_OUTER = 0.21; // tracker'ın velocity'yi ne kadar uyguladığı — yüksek = daha çok overshoot, daha yaylı
 const MAX_ALPHA = 0.55;
 const MIN_WIDTH = 0.5;
 const MAX_WIDTH = 1.6;

@@ -43,6 +43,12 @@ html {
   color-scheme: light;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 html, body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }

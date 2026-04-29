@@ -32,16 +32,13 @@ export default function Home() {
           style={{ animationDelay: "200ms" }}
         >
           <p>
-            25 yılı aşkın süredir yazılım dünyasının içerisindeyim. Bu süre
-            boyunca 100&apos;ün üzerinde irili ufaklı projede, kimi zaman tek
-            başıma, kimi zaman da bir ekibin parçası olarak görev aldım.
-            Kariyerimin ilk yıllarında uzun süre ActionScript / Flash
-            teknolojileriyle çalıştım. 2016 yılından bu yana ise React, Node.js
-            ve MongoDB gibi modern web teknolojileri üzerine çalışıyorum.
+            90&apos;lı yılların sonunda çocuk yaşta yazılımla ilgilenmeye
+            başladım. Flash ve ActionScript&apos;in parlak yıllarından geçtim;
+            bugün React, Node.js, MongoDB gibi modern web teknolojileriyle
+            çalışıyorum.
           </p>
           <p>
-            2024 yılının son çeyreğinde, edindiğim birikimi müşterilerimize daha
-            iyi sunabilmek için{" "}
+            2024&apos;ün sonunda{" "}
             <Link
               href="https://codecube.com.tr"
               target="_blank"
@@ -49,7 +46,24 @@ export default function Home() {
             >
               CodeCube Software
             </Link>
-            &apos;i kurdum.
+            &apos;i kurdum. Artık ekibimle birlikte müşterilerimiz için web ve
+            özel yazılımlar tasarlayıp geliştiriyoruz.
+          </p>
+          <p>
+            <Link
+              href="/blog"
+              className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+            >
+              Blog yazılarıma
+            </Link>{" "}
+            göz atabilir,{" "}
+            <a
+              href="#social"
+              className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+            >
+              sosyal medya hesaplarımdan
+            </a>{" "}
+            beni takip edebilirsiniz.
           </p>
         </div>
 
@@ -89,7 +103,8 @@ export default function Home() {
         )}
 
         <div
-          className="mt-12 pt-8 border-t border-line animate-fade-in-up"
+          id="social"
+          className="mt-12 pt-8 border-t border-line animate-fade-in-up scroll-mt-8"
           style={{ animationDelay: "400ms" }}
         >
           <SocialArea
