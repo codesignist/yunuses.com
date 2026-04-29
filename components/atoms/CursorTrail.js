@@ -2,12 +2,15 @@
 
 import { useEffect, useRef } from "react";
 
-const POINTS = 100;
-const ELASTIC_INNER = 0.08; // velocity'nin delta'ya yakınsama hızı — düşük = daha geç toparlanma, daha çok lag
-const ELASTIC_OUTER = 0.6;  // tracker'ın velocity'yi ne kadar uyguladığı — yüksek = daha çok overshoot, daha yaylı
+const POINTS = 70;
+const ELASTIC_INNER = 0.1; // velocity'nin delta'ya yakınsama hızı — düşük = daha geç toparlanma, daha çok lag
+const ELASTIC_OUTER = 0.2; // tracker'ın velocity'yi ne kadar uyguladığı — yüksek = daha çok overshoot, daha yaylı
 const MAX_ALPHA = 0.55;
 const MIN_WIDTH = 0.5;
 const MAX_WIDTH = 1.6;
+const ORBIT_PAD_RATIO = 1.6; // ellipse, linkin sınırından kaç px dışarıdan geçer
+const ORBIT_SPEED = 0.2; // rad/frame — ~1.5 sn'de tam tur
+const ORBIT_JITTER = 12; // px, her frame eklenen rastgele şaşma (kalemle çizim hissi)
 
 export default function CursorTrail() {
   const canvasRef = useRef(null);
@@ -42,11 +45,31 @@ export default function CursorTrail() {
     }));
 
     let active = false;
+    let hoveredLink = null;
+    let orbitAngle = 0;
+
+    const detectLink = (clientX, clientY) => {
+      const el = document.elementFromPoint(clientX, clientY);
+      return el ? el.closest("a") : null;
+    };
 
     const onMove = (e) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
       active = true;
+      const newLink = detectLink(e.clientX, e.clientY);
+      if (newLink !== hoveredLink) {
+        if (newLink) {
+          // Yeni linke girince yörüngeyi imlecin geldiği açıdan başlat —
+          // tracker'ın o anki konumundan en yakın orbit noktasına geçişi yumuşatır
+          const rect = newLink.getBoundingClientRect();
+          orbitAngle = Math.atan2(
+            e.clientY - (rect.top + rect.height / 2),
+            e.clientX - (rect.left + rect.width / 2),
+          );
+        }
+        hoveredLink = newLink;
+      }
     };
     const onEnter = (e) => {
       mouse.x = e.clientX;
@@ -60,9 +83,11 @@ export default function CursorTrail() {
         p.y = mouse.y;
       }
       active = true;
+      hoveredLink = detectLink(e.clientX, e.clientY);
     };
     const onLeave = () => {
       active = false;
+      hoveredLink = null;
     };
 
     window.addEventListener("mousemove", onMove);
@@ -71,9 +96,29 @@ export default function CursorTrail() {
 
     let raf = 0;
     const loop = () => {
-      // İç aşama: velocity, gerçek delta'ya doğru yaklaşır (lag yaratır)
-      velocity.x += ((mouse.x - tracker.x) - velocity.x) * ELASTIC_INNER;
-      velocity.y += ((mouse.y - tracker.y) - velocity.y) * ELASTIC_INNER;
+      // Hedef: link üzerindeyken yörünge noktası, değilse imlecin kendisi
+      let targetX = mouse.x;
+      let targetY = mouse.y;
+      if (hoveredLink) {
+        orbitAngle += ORBIT_SPEED;
+        const rect = hoveredLink.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const rx = (rect.width / 2) * ORBIT_PAD_RATIO;
+        const ry = (rect.height / 2) * ORBIT_PAD_RATIO;
+        targetX =
+          cx +
+          rx * Math.cos(orbitAngle) +
+          (Math.random() - 0.5) * ORBIT_JITTER * 2;
+        targetY =
+          cy +
+          ry * Math.sin(orbitAngle) +
+          (Math.random() - 0.5) * ORBIT_JITTER * 2;
+      }
+
+      // İç aşama: velocity, hedefe doğru yaklaşır (lag yaratır)
+      velocity.x += (targetX - tracker.x - velocity.x) * ELASTIC_INNER;
+      velocity.y += (targetY - tracker.y - velocity.y) * ELASTIC_INNER;
       // Dış aşama: tracker velocity ile ilerler (momentum → overshoot → yaylanma)
       tracker.x += velocity.x * ELASTIC_OUTER;
       tracker.y += velocity.y * ELASTIC_OUTER;
