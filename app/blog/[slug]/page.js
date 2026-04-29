@@ -1,3 +1,4 @@
+import ReadingProgress from "components/atoms/ReadingProgress";
 import SharePost from "components/atoms/SharePost";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -56,6 +57,7 @@ export default async function PostPage({ params }) {
 
   return (
     <main id="main" className="min-h-screen px-6 py-20 max-md:py-12 max-md:px-5">
+      <ReadingProgress />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(articleSchema) }}
