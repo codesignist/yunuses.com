@@ -49,6 +49,20 @@ html {
   }
 }
 
+@keyframes icon-flash {
+  0%, 20% { color: var(--color-fg); background-color: var(--color-line); }
+  100% { color: var(--color-muted); background-color: transparent; }
+}
+#social.flash a {
+  animation: icon-flash 1.2s ease-out;
+  border-radius: 50%;
+}
+#social.flash a:nth-child(2) { animation-delay: 70ms; }
+#social.flash a:nth-child(3) { animation-delay: 140ms; }
+#social.flash a:nth-child(4) { animation-delay: 210ms; }
+#social.flash a:nth-child(5) { animation-delay: 280ms; }
+#social.flash a:nth-child(6) { animation-delay: 350ms; }
+
 html, body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }

@@ -1,5 +1,6 @@
 import AvatarLink from "components/atoms/AvatarLink";
 import CursorTrailLoader from "components/atoms/CursorTrailLoader";
+import SocialAnchor from "components/atoms/SocialAnchor";
 import SocialArea from "components/organisms/SocialArea";
 import { formatDate, getAllPosts } from "lib/posts";
 import Link from "next/link";
@@ -57,12 +58,9 @@ export default function Home() {
               Blog yazılarıma
             </Link>{" "}
             göz atabilir,{" "}
-            <a
-              href="#social"
-              className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
-            >
+            <SocialAnchor className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors">
               sosyal medya hesaplarımdan
-            </a>{" "}
+            </SocialAnchor>{" "}
             beni takip edebilirsiniz.
           </p>
         </div>
