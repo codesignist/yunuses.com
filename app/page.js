@@ -11,14 +11,14 @@ export default function Home() {
     <main className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
       <CursorTrailLoader />
       <div className="w-full max-w-[560px]">
-        <div className="flex items-center gap-6 max-md:flex-col max-md:items-start max-md:gap-0">
+        <div className="flex items-center gap-6">
           <AvatarLink />
 
           <div
-            className="max-md:mt-8 animate-fade-in-up"
+            className="animate-fade-in-up"
             style={{ animationDelay: "100ms" }}
           >
-            <h1 className="text-4xl font-medium tracking-tight leading-tight text-fg max-md:text-3xl">
+            <h1 className="text-4xl font-medium tracking-tight leading-none text-fg max-md:text-3xl">
               Yunus Eş
             </h1>
             <p className="text-xl text-muted tracking-tight leading-tight">
