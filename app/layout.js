@@ -17,22 +17,12 @@ export const metadata = {
     title,
     description,
     url: "/",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        type: "image/png",
-        alt: "Yunus Eş — Kurucu, CodeCube",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     site: "@codesignist",
     title,
     description,
-    images: ["/og-image.png"],
   },
   other: {
     "fediverse:creator": "@codesignist@sosyal.teknofest.app",

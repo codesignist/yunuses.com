@@ -51,7 +51,7 @@ export default async function PostPage({ params }) {
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     author: { "@type": "Person", name: "Yunus Eş", url: SITE_URL },
     publisher: { "@type": "Person", name: "Yunus Eş", url: SITE_URL },
-    image: `${SITE_URL}/og-image.png`,
+    image: `${SITE_URL}/blog/${post.slug}/opengraph-image`,
   };
 
   return (
