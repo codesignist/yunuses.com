@@ -1,0 +1,37 @@
+import { getAllPosts } from "lib/posts";
+
+const SITE_URL = "https://yunuses.com";
+
+export default function sitemap() {
+  const posts = getAllPosts();
+
+  const staticRoutes = [
+    {
+      url: `${SITE_URL}/`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 1.0,
+    },
+    {
+      url: `${SITE_URL}/blog/`,
+      lastModified: posts[0]?.date ? new Date(posts[0].date) : new Date(),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${SITE_URL}/zero-to-hero/`,
+      lastModified: new Date("2026-04-21"),
+      changeFrequency: "yearly",
+      priority: 0.7,
+    },
+  ];
+
+  const postRoutes = posts.map((post) => ({
+    url: `${SITE_URL}/blog/${post.slug}/`,
+    lastModified: post.date ? new Date(post.date) : new Date(),
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [...staticRoutes, ...postRoutes];
+}
