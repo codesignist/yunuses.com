@@ -1,6 +1,6 @@
+import AvatarLink from "components/atoms/AvatarLink";
 import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SocialArea from "components/organisms/SocialArea";
-import Image from "next/image";
 import Link from "next/link";
 
 const stack = ["React", "Next.js", "Node.js", "MongoDB", "TypeScript"];
@@ -11,21 +11,7 @@ export default function Home() {
       <CursorTrailLoader />
       <div className="w-full max-w-[560px]">
         <div className="flex items-center gap-6 max-md:flex-col max-md:items-start max-md:gap-0">
-          <a
-            href="#"
-            aria-label="Yunus Eş avatarı"
-            className="rounded-full shrink-0 inline-block animate-fade-in-up"
-          >
-            <Image
-              src="/Avatar.png"
-              width={88}
-              height={88}
-              alt="Yunus Eş"
-              priority
-              className="rounded-full object-cover block"
-              style={{ width: "auto", height: "auto" }}
-            />
-          </a>
+          <AvatarLink />
 
           <div
             className="max-md:mt-8 animate-fade-in-up"
