@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import ThemeToggle from "components/atoms/ThemeToggle";
+import Script from "next/script";
 
 const themeInitScript = `(function(){try{var s=localStorage.getItem("theme");var t=s||(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
@@ -50,10 +51,13 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="tr" data-scroll-behavior="smooth" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+        >
+          {themeInitScript}
+        </Script>
         <ThemeToggle />
         {children}
       </body>
