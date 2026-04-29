@@ -51,8 +51,21 @@ export default function Home() {
         </div>
 
         <div
-          className="mt-10 flex flex-wrap gap-x-3 gap-y-2 text-[13px] text-faint animate-fade-in-up"
+          className="mt-8 animate-fade-in-up"
           style={{ animationDelay: "300ms" }}
+        >
+          <Link
+            href="/blog"
+            className="inline-flex items-center gap-1.5 text-[15px] text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+          >
+            Blog yazıları
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+
+        <div
+          className="mt-10 flex flex-wrap gap-x-3 gap-y-2 text-[13px] text-faint animate-fade-in-up"
+          style={{ animationDelay: "400ms" }}
         >
           {stack.map((tech, i) => (
             <span key={tech} className="flex items-center gap-3">
@@ -64,7 +77,7 @@ export default function Home() {
 
         <div
           className="mt-12 pt-8 border-t border-line animate-fade-in-up"
-          style={{ animationDelay: "400ms" }}
+          style={{ animationDelay: "500ms" }}
         >
           <SocialArea
             data={{

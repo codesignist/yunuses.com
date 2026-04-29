@@ -1,0 +1,79 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
+
+export function generateStaticParams() {
+  return getAllPosts().map((post) => ({ slug: post.slug }));
+}
+
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+  if (!post) return {};
+  return {
+    title: `${post.title} — Yunus Eş`,
+    description: post.summary,
+    openGraph: {
+      type: "article",
+      title: post.title,
+      description: post.summary,
+      publishedTime: post.date,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.summary,
+    },
+  };
+}
+
+export default async function PostPage({ params }) {
+  const { slug } = await params;
+  const post = await getPostBySlug(slug);
+  if (!post || post.draft) notFound();
+
+  return (
+    <main className="min-h-screen px-6 py-20 max-md:py-12 max-md:px-5">
+      <article className="w-full max-w-[680px] mx-auto">
+        <header className="mb-12 animate-fade-in-up">
+          <Link
+            href="/blog"
+            className="text-[13px] text-faint hover:text-fg transition-colors"
+          >
+            ← Blog
+          </Link>
+          <h1 className="font-blog-serif mt-6 text-[44px] font-semibold tracking-tight text-fg leading-[1.1] max-md:text-3xl">
+            {post.title}
+          </h1>
+          <div className="mt-6 flex items-baseline gap-3 text-[13px] text-faint">
+            <time dateTime={post.date}>{formatDate(post.date)}</time>
+            <span className="text-line">·</span>
+            <span>{post.readingTime} dk okuma</span>
+          </div>
+        </header>
+
+        <div
+          className="prose-blog animate-fade-in-up"
+          style={{ animationDelay: "120ms" }}
+          dangerouslySetInnerHTML={{ __html: post.html }}
+        />
+
+        {post.tags && post.tags.length > 0 && (
+          <footer
+            className="mt-16 pt-8 border-t border-line flex flex-wrap gap-x-3 gap-y-2 text-[13px] text-faint animate-fade-in-up"
+            style={{ animationDelay: "240ms" }}
+          >
+            {post.tags.map((tag, i) => (
+              <span key={tag} className="flex items-center gap-3">
+                <span>#{tag}</span>
+                {i < post.tags.length - 1 && (
+                  <span className="text-line">·</span>
+                )}
+              </span>
+            ))}
+          </footer>
+        )}
+      </article>
+    </main>
+  );
+}
