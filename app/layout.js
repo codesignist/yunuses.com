@@ -1,6 +1,19 @@
 import "../styles/globals.css";
 import ThemeInit from "components/atoms/ThemeInit";
 import ThemeToggle from "components/atoms/ThemeToggle";
+import { Geist, Geist_Mono } from "next/font/google";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+});
 
 const title = "Yunus Eş";
 const description =
@@ -43,7 +56,12 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="tr" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html
+      lang="tr"
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable}`}
+    >
       <body>
         <ThemeInit />
         <a

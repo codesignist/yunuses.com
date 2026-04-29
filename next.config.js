@@ -5,7 +5,7 @@ const cspDirectives = [
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
-  "font-src 'self' https://fonts.gstatic.com",
+  "font-src 'self'",
   `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
   "media-src 'self'",
   "frame-ancestors 'none'",
