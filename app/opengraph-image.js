@@ -8,9 +8,9 @@ export const contentType = "image/png";
 
 export default async function Image() {
   const avatarBuffer = fs.readFileSync(
-    path.join(process.cwd(), "public", "avatar.webp"),
+    path.join(process.cwd(), "public", "avatar.png"),
   );
-  const avatarSrc = `data:image/webp;base64,${avatarBuffer.toString("base64")}`;
+  const avatarSrc = `data:image/png;base64,${avatarBuffer.toString("base64")}`;
 
   return new ImageResponse(
     (

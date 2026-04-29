@@ -16,9 +16,9 @@ export default async function Image({ params }) {
   const post = await getPostBySlug(slug);
 
   const avatarBuffer = fs.readFileSync(
-    path.join(process.cwd(), "public", "avatar.webp"),
+    path.join(process.cwd(), "public", "avatar.png"),
   );
-  const avatarSrc = `data:image/webp;base64,${avatarBuffer.toString("base64")}`;
+  const avatarSrc = `data:image/png;base64,${avatarBuffer.toString("base64")}`;
 
   return new ImageResponse(
     (
@@ -76,8 +76,12 @@ export default async function Image({ params }) {
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 26, color: "#fafafa" }}>Yunus Eş</div>
             <div style={{ fontSize: 22, color: "#6b6b6b", marginTop: 4 }}>
-              {post?.date ? formatDate(post.date) : ""}
-              {post?.readingTime ? ` · ${post.readingTime} dk okuma` : ""}
+              {[
+                post?.date ? formatDate(post.date) : null,
+                post?.readingTime ? `${post.readingTime} dk okuma` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </div>
           </div>
         </div>
