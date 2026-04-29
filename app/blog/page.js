@@ -23,10 +23,10 @@ export default function BlogIndex() {
           >
             ← Anasayfa
           </Link>
-          <h1 className="font-blog-serif mt-6 text-[44px] font-semibold tracking-tight text-fg leading-[1.1] max-md:text-3xl">
+          <h1 className="font-blog-serif mt-6 text-4xl font-semibold tracking-tight text-fg leading-tight max-md:text-3xl">
             Blog
           </h1>
-          <p className="font-blog-serif mt-4 text-[18px] leading-[1.6] text-muted italic">
+          <p className="font-blog-serif mt-3 text-[15px] leading-[1.7] text-muted italic">
             Yazılım, ürün ve süreç üzerine notlar.
           </p>
         </header>
@@ -47,11 +47,11 @@ export default function BlogIndex() {
                     <span className="text-line">·</span>
                     <span>{post.readingTime} dk okuma</span>
                   </div>
-                  <h2 className="font-blog-serif mt-2 text-[28px] font-semibold tracking-tight text-fg leading-[1.2] group-hover:text-fg/90 transition-colors max-md:text-2xl">
+                  <h2 className="font-blog-serif mt-2 text-2xl font-semibold tracking-tight text-fg leading-snug group-hover:text-fg/90 transition-colors max-md:text-xl">
                     {post.title}
                   </h2>
                   {post.summary && (
-                    <p className="font-blog-serif mt-3 text-[17px] leading-[1.6] text-muted">
+                    <p className="font-blog-serif mt-3 text-[15px] leading-[1.7] text-muted">
                       {post.summary}
                     </p>
                   )}

@@ -43,7 +43,7 @@ export default async function PostPage({ params }) {
           >
             ← Blog
           </Link>
-          <h1 className="font-blog-serif mt-6 text-[44px] font-semibold tracking-tight text-fg leading-[1.1] max-md:text-3xl">
+          <h1 className="font-blog-serif mt-6 text-4xl font-semibold tracking-tight text-fg leading-tight max-md:text-3xl">
             {post.title}
           </h1>
           <div className="mt-6 flex items-baseline gap-3 text-[13px] text-faint">
