@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const BIG_TARGET = 600;
 const ENTER_DURATION = 380;
@@ -10,15 +10,23 @@ const EXIT_DURATION = 300;
 export default function AvatarLightbox({ origin, onClose }) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  const dialogRef = useRef(null);
 
   useEffect(() => {
+    dialogRef.current?.focus({ preventScroll: true });
+
     // İlk paint origin pozisyonunda olsun, ikinci RAF'ta açılış state'ine geç
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(() => setOpen(true));
     });
 
     const handleKey = (e) => {
-      if (e.key === "Escape") triggerClose();
+      if (e.key === "Escape") {
+        triggerClose();
+      } else if (e.key === "Tab") {
+        // Focus trap — modal içinde focusable element olmadığı için Tab'ı tutuyoruz
+        e.preventDefault();
+      }
     };
     document.addEventListener("keydown", handleKey);
 
@@ -65,10 +73,12 @@ export default function AvatarLightbox({ origin, onClose }) {
 
   return (
     <div
+      ref={dialogRef}
       onClick={triggerClose}
       role="dialog"
       aria-modal="true"
       aria-label="Avatar büyük görünüm"
+      tabIndex={-1}
       style={{
         position: "fixed",
         inset: 0,
@@ -82,6 +92,7 @@ export default function AvatarLightbox({ origin, onClose }) {
         opacity: backdropOpacity,
         transition: transitionsOn ? `opacity ${duration}ms ${easing}` : "none",
         cursor: "zoom-out",
+        outline: "none",
       }}
     >
       <div

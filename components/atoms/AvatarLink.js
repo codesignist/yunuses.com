@@ -23,6 +23,11 @@ export default function AvatarLink() {
     });
   };
 
+  const handleClose = () => {
+    setOrigin(null);
+    linkRef.current?.focus({ preventScroll: true });
+  };
+
   return (
     <>
       <a
@@ -44,7 +49,7 @@ export default function AvatarLink() {
         />
       </a>
       {origin && (
-        <AvatarLightbox origin={origin} onClose={() => setOrigin(null)} />
+        <AvatarLightbox origin={origin} onClose={handleClose} />
       )}
     </>
   );
