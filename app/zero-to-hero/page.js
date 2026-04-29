@@ -76,7 +76,7 @@ const faq = [
 
 export default function ZeroToHero() {
   return (
-    <main className="min-h-screen px-6 py-16 max-md:py-12 max-md:px-5 animate-fade-in">
+    <main id="main" className="min-h-screen px-6 py-16 max-md:py-12 max-md:px-5 animate-fade-in">
       <div className="mx-auto max-w-[720px]">
         <LinkButton icon="chevron-left" href="/">
           Ana sayfa

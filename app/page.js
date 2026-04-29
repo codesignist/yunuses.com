@@ -38,7 +38,7 @@ export default function Home() {
   const latestPost = getAllPosts()[0];
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
+    <main id="main" className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(personSchema) }}

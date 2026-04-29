@@ -6,7 +6,7 @@ export const metadata = {
 
 export default function NotFound() {
   return (
-    <main className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
+    <main id="main" className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
       <div className="w-full max-w-[480px] text-center">
         <div className="text-[12px] text-faint uppercase tracking-[0.08em] mb-4 animate-fade-in-up">
           Sayfa bulunamadı
