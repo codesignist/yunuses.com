@@ -1,11 +1,12 @@
 import AvatarLink from "components/atoms/AvatarLink";
 import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SocialArea from "components/organisms/SocialArea";
+import { formatDate, getAllPosts } from "lib/posts";
 import Link from "next/link";
 
-const stack = ["React", "Next.js", "Node.js", "MongoDB", "TypeScript"];
-
 export default function Home() {
+  const latestPost = getAllPosts()[0];
+
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
       <CursorTrailLoader />
@@ -50,34 +51,44 @@ export default function Home() {
           </p>
         </div>
 
-        <div
-          className="mt-8 animate-fade-in-up"
-          style={{ animationDelay: "300ms" }}
-        >
-          <Link
-            href="/blog"
-            className="inline-flex items-center gap-1.5 text-[15px] text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+        {latestPost && (
+          <div
+            className="mt-12 pt-8 border-t border-line animate-fade-in-up"
+            style={{ animationDelay: "300ms" }}
           >
-            Blog yazıları
-            <span aria-hidden="true">→</span>
-          </Link>
-        </div>
-
-        <div
-          className="mt-10 flex flex-wrap gap-x-3 gap-y-2 text-[13px] text-faint animate-fade-in-up"
-          style={{ animationDelay: "400ms" }}
-        >
-          {stack.map((tech, i) => (
-            <span key={tech} className="flex items-center gap-3">
-              <span>{tech}</span>
-              {i < stack.length - 1 && <span className="text-line">·</span>}
-            </span>
-          ))}
-        </div>
+            <div className="text-[12px] text-faint uppercase tracking-[0.08em] mb-4">
+              Son yazı
+            </div>
+            <Link href={`/blog/${latestPost.slug}`} className="group block">
+              <h2 className="text-xl font-medium tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors">
+                {latestPost.title}
+              </h2>
+              <div className="mt-2 flex items-baseline gap-3 text-[13px] text-faint">
+                <time dateTime={latestPost.date}>
+                  {formatDate(latestPost.date)}
+                </time>
+                <span className="text-line">·</span>
+                <span>{latestPost.readingTime} dk okuma</span>
+              </div>
+              {latestPost.summary && (
+                <p className="mt-3 text-[15px] leading-[1.7] text-muted">
+                  {latestPost.summary}
+                </p>
+              )}
+            </Link>
+            <Link
+              href="/blog"
+              className="inline-flex items-center gap-1.5 mt-5 text-[14px] text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+            >
+              Tüm yazılar
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        )}
 
         <div
           className="mt-12 pt-8 border-t border-line animate-fade-in-up"
-          style={{ animationDelay: "500ms" }}
+          style={{ animationDelay: "400ms" }}
         >
           <SocialArea
             data={{
