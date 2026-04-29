@@ -10,6 +10,7 @@ const AvatarLightbox = dynamic(() => import("./AvatarLightbox"), {
 
 export default function AvatarLink() {
   const linkRef = useRef(null);
+  const preloadedRef = useRef(false);
   const [origin, setOrigin] = useState(null);
 
   const handleClick = (e) => {
@@ -28,12 +29,21 @@ export default function AvatarLink() {
     linkRef.current?.focus({ preventScroll: true });
   };
 
+  const preload = () => {
+    if (preloadedRef.current) return;
+    preloadedRef.current = true;
+    import("./AvatarLightbox");
+  };
+
   return (
     <>
       <a
         ref={linkRef}
         href="#"
         onClick={handleClick}
+        onMouseEnter={preload}
+        onFocus={preload}
+        onTouchStart={preload}
         aria-label="Yunus Eş avatarını büyüt"
         aria-expanded={origin !== null}
         className="rounded-full shrink-0 inline-block animate-fade-in-up"
