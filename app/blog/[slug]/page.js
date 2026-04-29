@@ -1,3 +1,4 @@
+import SharePost from "components/atoms/SharePost";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
@@ -58,21 +59,23 @@ export default async function PostPage({ params }) {
           dangerouslySetInnerHTML={{ __html: post.html }}
         />
 
-        {post.tags && post.tags.length > 0 && (
-          <footer
-            className="mt-16 pt-8 border-t border-line flex flex-wrap gap-x-3 gap-y-2 text-[13px] text-faint animate-fade-in-up"
-            style={{ animationDelay: "240ms" }}
-          >
-            {post.tags.map((tag, i) => (
-              <span key={tag} className="flex items-center gap-3">
-                <span>#{tag}</span>
-                {i < post.tags.length - 1 && (
-                  <span className="text-line">·</span>
-                )}
-              </span>
-            ))}
-          </footer>
-        )}
+        <footer
+          className="mt-16 pt-8 border-t border-line flex items-center justify-between flex-wrap gap-4 animate-fade-in-up"
+          style={{ animationDelay: "240ms" }}
+        >
+          <div className="flex flex-wrap gap-x-3 gap-y-2 text-[13px] text-faint">
+            {post.tags &&
+              post.tags.map((tag, i) => (
+                <span key={tag} className="flex items-center gap-3">
+                  <span>#{tag}</span>
+                  {i < post.tags.length - 1 && (
+                    <span className="text-line">·</span>
+                  )}
+                </span>
+              ))}
+          </div>
+          <SharePost title={post.title} />
+        </footer>
       </article>
     </main>
   );
