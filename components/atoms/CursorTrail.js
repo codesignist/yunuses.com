@@ -47,10 +47,24 @@ export default function CursorTrail() {
     let active = false;
     let hoveredLink = null;
     let orbitAngle = 0;
+    let strokeRGB = "250, 250, 250";
+
+    const readStrokeColor = () => {
+      const hex = getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-fg")
+        .trim();
+      const m = hex.match(/^#([0-9a-f]{6})$/i);
+      if (!m) return;
+      const v = m[1];
+      strokeRGB = `${parseInt(v.slice(0, 2), 16)}, ${parseInt(v.slice(2, 4), 16)}, ${parseInt(v.slice(4, 6), 16)}`;
+    };
+    readStrokeColor();
+    const onThemeChange = () => readStrokeColor();
+    window.addEventListener("themechange", onThemeChange);
 
     const detectLink = (clientX, clientY) => {
       const el = document.elementFromPoint(clientX, clientY);
-      return el ? el.closest("a") : null;
+      return el ? el.closest("a, button") : null;
     };
 
     const onMove = (e) => {
@@ -133,7 +147,7 @@ export default function CursorTrail() {
         ctx.lineJoin = "round";
         for (let i = 0; i < trail.length - 1; i++) {
           const t = i / (trail.length - 1);
-          ctx.strokeStyle = `rgba(250, 250, 250, ${t * MAX_ALPHA})`;
+          ctx.strokeStyle = `rgba(${strokeRGB}, ${t * MAX_ALPHA})`;
           ctx.lineWidth = MIN_WIDTH + t * (MAX_WIDTH - MIN_WIDTH);
           ctx.beginPath();
           if (i === 0) {
@@ -168,6 +182,7 @@ export default function CursorTrail() {
       window.removeEventListener("mouseenter", onEnter);
       window.removeEventListener("mouseleave", onLeave);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("themechange", onThemeChange);
     };
   }, []);
 

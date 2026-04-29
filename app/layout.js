@@ -1,4 +1,7 @@
 import "../styles/globals.css";
+import ThemeToggle from "components/atoms/ThemeToggle";
+
+const themeInitScript = `(function(){try{var s=localStorage.getItem("theme");var t=s||(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
 const title = "Yunus Eş";
 const description =
@@ -46,8 +49,12 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="tr">
+    <html lang="tr" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
+        <ThemeToggle />
         {children}
       </body>
     </html>
