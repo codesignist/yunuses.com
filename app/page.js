@@ -1,3 +1,4 @@
+import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SocialArea from "components/organisms/SocialArea";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,16 +8,24 @@ const stack = ["React", "Next.js", "Node.js", "MongoDB", "TypeScript"];
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
+      <CursorTrailLoader />
       <div className="w-full max-w-[560px] animate-fade-in-up">
         <div className="flex items-center gap-6 max-md:flex-col max-md:items-start max-md:gap-0">
-          <Image
-            src="/Avatar.png"
-            width={88}
-            height={88}
-            alt="Yunus Eş"
-            priority
-            className="rounded-full object-cover shrink-0"
-          />
+          <a
+            href="#"
+            aria-label="Yunus Eş avatarı"
+            className="rounded-full shrink-0 inline-block"
+          >
+            <Image
+              src="/Avatar.png"
+              width={88}
+              height={88}
+              alt="Yunus Eş"
+              priority
+              className="rounded-full object-cover block"
+              style={{ width: "auto", height: "auto" }}
+            />
+          </a>
 
           <div className="max-md:mt-8">
             <h1 className="text-4xl font-medium tracking-tight leading-tight text-fg max-md:text-3xl">

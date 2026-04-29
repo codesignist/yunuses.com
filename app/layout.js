@@ -1,5 +1,4 @@
 import "../styles/globals.css";
-import CursorTrail from "components/atoms/CursorTrail";
 
 const title = "Yunus Eş";
 const description =
@@ -50,7 +49,6 @@ export default function RootLayout({ children }) {
     <html lang="tr">
       <body>
         {children}
-        <CursorTrail />
       </body>
     </html>
   );
