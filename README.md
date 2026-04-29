@@ -49,7 +49,7 @@ summary: "Kısa özet."
 Yazı içeriği...
 ```
 
-Liste sayfası `/blog`, RSS akışı ise `/feed.xml` adresinden yayınlanır. Yazıların okuma süresi otomatik hesaplanır; yazı sayfasında üstte sticky bir [ReadingProgress](components/atoms/ReadingProgress.js) çubuğu ve altta [SharePost](components/atoms/SharePost.js) bileşeni yer alır.
+Liste sayfası `/blog`, akışlar ise iki formatta yayınlanır: klasik RSS için `/feed.xml`, [JSON Feed 1.1](https://www.jsonfeed.org/version/1.1/) için `/feed.json`. İkisi de `<head>` içinde `rel="alternate"` ile bağlıdır. Yazıların okuma süresi otomatik hesaplanır; yazı sayfasında üstte sticky bir [ReadingProgress](components/atoms/ReadingProgress.js) çubuğu ve altta [SharePost](components/atoms/SharePost.js) bileşeni yer alır.
 
 ## Tema
 
@@ -67,7 +67,8 @@ yunuses.com
 ├── app
 │   ├── blog                  # blog index + [slug] dinamik sayfa
 │   ├── zero-to-hero          # mini ders sayfası
-│   ├── feed.xml              # RSS endpoint
+│   ├── feed.xml              # RSS 2.0 endpoint
+│   ├── feed.json             # JSON Feed 1.1 endpoint
 │   ├── opengraph-image.js    # dinamik OG görseli
 │   ├── sitemap.js
 │   ├── layout.js
