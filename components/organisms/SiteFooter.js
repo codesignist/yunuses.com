@@ -18,7 +18,6 @@ const SOCIAL_DATA = {
 // aynı genişlikte hizalansın.
 function maxWidthFor(pathname) {
   if (!pathname || pathname === "/") return "max-w-[560px]";
-  if (pathname.startsWith("/zero-to-hero")) return "max-w-[720px]";
   return "max-w-[680px]";
 }
 

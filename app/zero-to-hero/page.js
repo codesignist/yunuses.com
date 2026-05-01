@@ -77,7 +77,7 @@ const faq = [
 export default function ZeroToHero() {
   return (
     <main id="main" className="flex-1 px-6 py-16 max-md:py-12 max-md:px-5 animate-fade-in">
-      <div className="mx-auto max-w-[720px]">
+      <div className="mx-auto max-w-[680px]">
         <LinkButton icon="chevron-left" href="/">
           Ana sayfa
         </LinkButton>
@@ -105,7 +105,7 @@ export default function ZeroToHero() {
         <LessonsMap lessons={lessons} types={types} />
       </div>
 
-      <div className="mx-auto max-w-[720px]">
+      <div className="mx-auto max-w-[680px]">
         <H2>Tanıtım</H2>
         <div className="space-y-5 text-[15px] leading-[1.7] text-muted">
           <p>
