@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function ThemeToggle() {
+  const pathname = usePathname();
   const [theme, setTheme] = useState(null);
 
   useEffect(() => {
     const current = document.documentElement.getAttribute("data-theme") || "dark";
     setTheme(current);
   }, []);
+
+  // Lab ve alt sayfalarında tema toggle gizli — oyun/deney ortamı her zaman koyu.
+  if (pathname && pathname.startsWith("/lab")) return null;
 
   const toggle = () => {
     const next = theme === "light" ? "dark" : "light";
@@ -25,7 +30,7 @@ export default function ThemeToggle() {
       <button
         type="button"
         aria-label="Tema değiştir"
-        className="fixed top-5 right-5 z-40 w-9 h-9 rounded-full cursor-pointer"
+        className="fixed top-5 right-16 z-40 w-9 h-9 rounded-full cursor-pointer"
       />
     );
   }
@@ -38,7 +43,7 @@ export default function ThemeToggle() {
       onClick={toggle}
       aria-label={isLight ? "Koyu temaya geç" : "Açık temaya geç"}
       title={isLight ? "Koyu temaya geç" : "Açık temaya geç"}
-      className="fixed top-5 right-5 z-40 w-9 h-9 rounded-full cursor-pointer flex items-center justify-center text-faint hover:text-fg hover:bg-line-soft transition-colors"
+      className="fixed top-5 right-16 z-40 w-9 h-9 rounded-full cursor-pointer flex items-center justify-center text-faint hover:text-fg hover:bg-line-soft transition-colors"
     >
       {isLight ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
