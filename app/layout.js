@@ -65,7 +65,7 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body>
+      <body className="flex flex-col min-h-screen">
         <ThemeInit />
         <a
           href="#main"

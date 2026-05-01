@@ -55,7 +55,7 @@ export default async function PostPage({ params }) {
   };
 
   return (
-    <main id="main" className="px-6 py-20 max-md:py-12 max-md:px-5">
+    <main id="main" className="flex-1 px-6 py-20 max-md:py-12 max-md:px-5">
       <ReadingProgress />
       <script
         type="application/ld+json"

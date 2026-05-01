@@ -9,5 +9,9 @@ const sourceSerif = Source_Serif_4({
 });
 
 export default function BlogLayout({ children }) {
-  return <div className={sourceSerif.variable}>{children}</div>;
+  return (
+    <div className={`${sourceSerif.variable} flex-1 flex flex-col`}>
+      {children}
+    </div>
+  );
 }

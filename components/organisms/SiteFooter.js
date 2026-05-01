@@ -34,7 +34,7 @@ export default function SiteFooter() {
   const isBlogPost = pathname && /^\/blog\/[^/]+/.test(pathname);
 
   return (
-    <footer className="mt-10 border-t border-line px-6 max-md:px-5 py-8">
+    <footer className="border-t border-line px-6 max-md:px-5 py-8">
       <div className={`mx-auto ${maxWidthFor(pathname)}`}>
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[13px] text-faint">
