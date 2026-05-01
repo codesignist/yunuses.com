@@ -82,8 +82,9 @@ export default async function PostPage({ params }) {
         <div
           className="prose-blog animate-fade-in-up"
           style={{ animationDelay: "120ms" }}
-          dangerouslySetInnerHTML={{ __html: post.html }}
-        />
+        >
+          {post.node}
+        </div>
       </article>
     </main>
   );
