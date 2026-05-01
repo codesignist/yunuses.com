@@ -7,10 +7,13 @@ export default function SharePost({ title }) {
 
   const handleShare = async () => {
     const url = window.location.href;
+    const shareTitle =
+      title ||
+      (typeof document !== "undefined" ? document.title : "");
 
     if (navigator.share) {
       try {
-        await navigator.share({ title, url });
+        await navigator.share({ title: shareTitle, url });
         return;
       } catch (err) {
         if (err.name === "AbortError") return;

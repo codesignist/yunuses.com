@@ -30,8 +30,20 @@ const SPAWN_DURATION = 700;
 const TRAIL_MAX = 8;
 
 // Bir tur süresi (ms) — sonunda oyun biter ve paylaşım ekranı çıkar
-const GAME_DURATION = 30000;
+const GAME_DURATION = 90000;
 const SHARE_URL = "https://yunuses.com/lab/3d-ping-pong";
+
+// Modlar
+const MODE_TIME = "time";
+const MODE_SURVIVAL = "survival";
+
+// Survival mod parametreleri
+const SURVIVAL_LIVES = 3;
+const BULLET_COOLDOWN_MS = 350;
+const BULLET_RADIUS = 6;
+const BULLET_SPEED = 32;
+const BULLET_BONUS = 3;
+const AI_STUN_MS = 280;
 
 // =====================================================================
 // Web Audio — küçük programatik beep'ler. Asset yok, tek osilatör senteziyle
@@ -130,6 +142,20 @@ const SFX = {
     blip(880, 0.16, "square", 0.1);
     setTimeout(() => blip(660, 0.16, "square", 0.1), 120);
     setTimeout(() => blip(440, 0.32, "square", 0.1), 240);
+  },
+  bullet() {
+    // kısa "pew" — yüksek frekans, hızla düşen pitch
+    blip(1100, 0.07, "square", 0.07, -700);
+  },
+  bulletHit() {
+    // CPU'ya isabet — kısa parlak ikili
+    blip(720, 0.06, "square", 0.1);
+    setTimeout(() => blip(960, 0.08, "square", 0.09), 35);
+  },
+  loseLife() {
+    // can kaybı — alçalan üçlü, dramatik
+    blip(330, 0.14, "sawtooth", 0.12, -120);
+    setTimeout(() => blip(220, 0.18, "sawtooth", 0.12, -80), 90);
   },
 };
 
@@ -336,11 +362,12 @@ function SevenSegDigit({ char, height = 62, rgb }) {
   );
 }
 
-function ScoreBlock({ value, rgb, label }) {
+function ScoreBlock({ value, rgb, label, digits = 2 }) {
   const isPlaceholder = value == null;
-  const digits = isPlaceholder
-    ? "--"
-    : String(Math.min(99, Math.max(0, value))).padStart(2, "0");
+  const max = Math.pow(10, digits) - 1;
+  const str = isPlaceholder
+    ? "-".repeat(digits)
+    : String(Math.min(max, Math.max(0, value))).padStart(digits, "0");
   return (
     <div className="flex flex-col items-center">
       <div
@@ -353,7 +380,7 @@ function ScoreBlock({ value, rgb, label }) {
             : `inset 0 0 28px rgba(${rgb}, 0.1)`,
         }}
       >
-        {digits.split("").map((d, i) => (
+        {str.split("").map((d, i) => (
           <SevenSegDigit key={i} char={d} height={62} rgb={rgb} />
         ))}
       </div>
@@ -376,12 +403,32 @@ export default function PingPong() {
   const [, setTimeLeft] = useState(GAME_DURATION);
   const [copied, setCopied] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [mode, setMode] = useState(MODE_TIME);
+  const [lives, setLives] = useState(SURVIVAL_LIVES);
+  const stateRef = useRef(null);
 
   useEffect(() => {
     const m = loadMutedFromStorage();
     _audioMuted = m;
     setMuted(m);
+    // mod tercihi de hatırlanıyor — hem React hem mutable state'e yansıt
+    try {
+      const saved = localStorage.getItem("pingpong_mode");
+      if (saved === MODE_SURVIVAL || saved === MODE_TIME) {
+        setMode(saved);
+        if (stateRef.current) stateRef.current.mode = saved;
+      }
+    } catch {}
   }, []);
+
+  const switchMode = (m) => {
+    setMode(m);
+    try {
+      localStorage.setItem("pingpong_mode", m);
+    } catch {}
+    // HUD canvas tarafı state.mode'a bakıyor — anında senkronize et
+    if (stateRef.current) stateRef.current.mode = m;
+  };
 
   const toggleMute = () => {
     const next = !muted;
@@ -419,7 +466,28 @@ export default function PingPong() {
       ripples: [],
       gameTime: 0,
       gameOver: false,
+      // mode başlangıç değeri için localStorage'a bak — overlay arkasındaki
+      // HUD ilk frame'de doğru moda göre çizilsin.
+      mode: (() => {
+        try {
+          const saved =
+            typeof localStorage !== "undefined"
+              ? localStorage.getItem("pingpong_mode")
+              : null;
+          if (saved === MODE_SURVIVAL || saved === MODE_TIME) return saved;
+        } catch {}
+        return MODE_TIME;
+      })(),
+      lives: SURVIVAL_LIVES,
+      bullets: [],
+      bulletCooldownT: 0,
+      bulletPending: false,
+      aiStun: 0,
+      playerX: 0,
+      playerY: 0,
     };
+
+    stateRef.current = state;
 
     const dpr = () => Math.min(window.devicePixelRatio || 1, 2);
 
@@ -468,7 +536,9 @@ export default function PingPong() {
         setMouse(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
-    const beginRound = () => {
+    const beginRound = (selectedMode) => {
+      const m = selectedMode === MODE_SURVIVAL ? MODE_SURVIVAL : MODE_TIME;
+      state.mode = m;
       state.score.player = 0;
       state.score.ai = 0;
       setScore({ player: 0, ai: 0 });
@@ -479,6 +549,12 @@ export default function PingPong() {
       state.speedMult = 1;
       state.ripples.length = 0;
       state.ballTrail.length = 0;
+      state.bullets.length = 0;
+      state.bulletCooldownT = 0;
+      state.bulletPending = false;
+      state.aiStun = 0;
+      state.lives = SURVIVAL_LIVES;
+      setLives(SURVIVAL_LIVES);
       state.running = true;
       setRunning(true);
       resetBall(1);
@@ -487,10 +563,9 @@ export default function PingPong() {
     const onStart = (e) => {
       if (e.touches && e.touches[0])
         setMouse(e.touches[0].clientX, e.touches[0].clientY);
-      if (state.gameOver) {
-        beginRound();
-      } else if (!state.running) {
-        beginRound();
+      // Survival modunda oyun çalışırken tıklama → ateş tetiklemesi
+      if (state.running && state.mode === MODE_SURVIVAL) {
+        if (state.bulletCooldownT <= 0) state.bulletPending = true;
       }
     };
 
@@ -499,7 +574,10 @@ export default function PingPong() {
     canvas.addEventListener("click", onStart);
     canvas.addEventListener("touchstart", onStart, { passive: true });
 
-    const onExternalRestart = () => beginRound();
+    const onExternalRestart = (e) => {
+      const m = e && e.detail && e.detail.mode ? e.detail.mode : state.mode;
+      beginRound(m);
+    };
     window.addEventListener("pingpong-restart", onExternalRestart);
 
     function resetBall(dir) {
@@ -676,6 +754,41 @@ export default function PingPong() {
       return p;
     }
 
+    function drawBullet(bu) {
+      const p = project(bu.x, bu.y, bu.z);
+      if (!p) return;
+      const r = BULLET_RADIUS * p.s;
+      if (r < 0.3) return;
+
+      // Hafif iz (mermi vz büyük → motion blur etkisi)
+      const tail = project(bu.x, bu.y, bu.z - bu.vz * 1.6);
+      if (tail) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 255, 240, 0.3)";
+        ctx.lineWidth = Math.max(1, r * 0.6);
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(tail.x, tail.y);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Parlak çekirdek
+      ctx.save();
+      ctx.shadowColor = "rgba(255, 255, 220, 0.8)";
+      ctx.shadowBlur = 10;
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      g.addColorStop(0, "rgba(255, 255, 255, 1)");
+      g.addColorStop(0.5, "rgba(255, 245, 200, 0.9)");
+      g.addColorStop(1, "rgba(255, 200, 80, 0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     function drawBall() {
       // Motion blur — eski → yeni sırasıyla, sönümlenerek
       const trails = state.ballTrail;
@@ -845,13 +958,40 @@ export default function PingPong() {
       const paddleClamp = HALF_S - HALF_PADDLE;
       const playerX = Math.max(-paddleClamp, Math.min(paddleClamp, playerXRaw));
       const playerY = Math.max(-paddleClamp, Math.min(paddleClamp, playerYRaw));
+      state.playerX = playerX;
+      state.playerY = playerY;
 
       if (state.spawnT > 0) {
         state.spawnT = Math.max(0, state.spawnT - dt);
       }
       const isSpawning = state.spawnT > 0;
 
-      if (state.running) {
+      // Bullet cooldown ve AI stun zaman sayaçları
+      if (state.bulletCooldownT > 0)
+        state.bulletCooldownT = Math.max(0, state.bulletCooldownT - dt);
+      if (state.aiStun > 0)
+        state.aiStun = Math.max(0, state.aiStun - dt);
+
+      // Bekleyen ateş varsa, mevcut paddle pozisyonundan mermi spawn et
+      if (
+        state.bulletPending &&
+        state.running &&
+        state.mode === MODE_SURVIVAL &&
+        !isSpawning
+      ) {
+        state.bulletPending = false;
+        state.bullets.push({
+          x: state.playerX,
+          y: state.playerY,
+          z: PLAYER_Z + BULLET_RADIUS + 4,
+          vz: BULLET_SPEED,
+        });
+        state.bulletCooldownT = BULLET_COOLDOWN_MS;
+        SFX.bullet();
+      }
+
+      // Sadece time mode'da süre saymakta
+      if (state.running && state.mode === MODE_TIME) {
         state.gameTime += dt;
         const remaining = Math.max(0, GAME_DURATION - state.gameTime);
         setTimeLeft(remaining);
@@ -862,6 +1002,10 @@ export default function PingPong() {
           setGameOver(true);
           SFX.gameOver();
         }
+      } else if (state.running && state.mode === MODE_SURVIVAL) {
+        // Survival'da da gameTime artıyor (skor için kullanmıyoruz, ama
+        // shake/spawn timer animasyonları için tutarlılık)
+        state.gameTime += dt;
       }
 
       if (state.running && !isSpawning) {
@@ -904,7 +1048,8 @@ export default function PingPong() {
           SFX.wallHit(Math.abs(b.vy) / 22);
         }
 
-        const aiEase = 1 - Math.pow(0.93, t);
+        // Stunluyken CPU paddle hareket etmez
+        const aiEase = state.aiStun > 0 ? 0 : 1 - Math.pow(0.93, t);
         const aiTargetX = b.x + (Math.random() - 0.5) * 8;
         const aiTargetY = b.y + (Math.random() - 0.5) * 6;
         state.ai.x += (aiTargetX - state.ai.x) * aiEase;
@@ -923,7 +1068,9 @@ export default function PingPong() {
             b.vx += (b.x - playerX) * 0.05;
             b.vy += (b.y - playerY) * 0.045;
             state.hitFlash = 1;
-            state.speedMult = Math.min(1.9, state.speedMult + 0.025);
+            const cap = state.mode === MODE_SURVIVAL ? 2.4 : 1.9;
+            const inc = state.mode === MODE_SURVIVAL ? 0.04 : 0.025;
+            state.speedMult = Math.min(cap, state.speedMult + inc);
             addRipple(
               b.x,
               b.y,
@@ -934,11 +1081,28 @@ export default function PingPong() {
             );
             SFX.playerHit();
           } else if (b.z <= -HALF_D) {
-            state.score.ai++;
-            setScore({ ...state.score });
-            state.missFlash = 1;
-            SFX.scoreOther();
-            resetBall(1);
+            // Player kaçırdı
+            if (state.mode === MODE_SURVIVAL) {
+              state.lives = Math.max(0, state.lives - 1);
+              setLives(state.lives);
+              state.missFlash = 1;
+              SFX.loseLife();
+              if (state.lives <= 0) {
+                state.running = false;
+                state.gameOver = true;
+                setRunning(false);
+                setGameOver(true);
+                SFX.gameOver();
+              } else {
+                resetBall(1);
+              }
+            } else {
+              state.score.ai++;
+              setScore({ ...state.score });
+              state.missFlash = 1;
+              SFX.scoreOther();
+              resetBall(1);
+            }
           }
         }
 
@@ -951,7 +1115,9 @@ export default function PingPong() {
             b.vz = -Math.abs(b.vz) * 1.04;
             b.vx += (b.x - state.ai.x) * 0.04;
             b.vy += (b.y - state.ai.y) * 0.035;
-            state.speedMult = Math.min(1.9, state.speedMult + 0.025);
+            const cap = state.mode === MODE_SURVIVAL ? 2.4 : 1.9;
+            const inc = state.mode === MODE_SURVIVAL ? 0.04 : 0.025;
+            state.speedMult = Math.min(cap, state.speedMult + inc);
             state.aiHitFlash = 1;
             addRipple(b.x, b.y, AI_Z, "z", Math.abs(b.vz), COLOR_AI);
             SFX.aiHit();
@@ -968,6 +1134,40 @@ export default function PingPong() {
         b.vx = Math.max(-maxV, Math.min(maxV, b.vx));
         b.vy = Math.max(-maxV, Math.min(maxV, b.vy));
         b.vz = Math.max(-maxV, Math.min(maxV, b.vz));
+
+        // Mermi güncellemesi (sadece survival)
+        if (state.mode === MODE_SURVIVAL && state.bullets.length) {
+          for (let i = state.bullets.length - 1; i >= 0; i--) {
+            const bu = state.bullets[i];
+            bu.z += bu.vz * t;
+
+            // CPU paddle'ına çarpma kontrolü
+            if (bu.z >= AI_Z - HALF_PADDLE * 0.2) {
+              const dx = Math.abs(bu.x - state.ai.x);
+              const dy = Math.abs(bu.y - state.ai.y);
+              if (dx <= HALF_PADDLE && dy <= HALF_PADDLE) {
+                state.score.player += BULLET_BONUS;
+                setScore({ ...state.score });
+                state.aiHitFlash = 1;
+                state.aiStun = AI_STUN_MS;
+                state.scoreFlash = 1;
+                addRipple(
+                  bu.x,
+                  bu.y,
+                  AI_Z,
+                  "z",
+                  Math.max(8, Math.abs(bu.vz) * 0.4),
+                  COLOR_AI
+                );
+                SFX.bulletHit();
+                state.bullets.splice(i, 1);
+                continue;
+              }
+            }
+            // Arka duvarı (CPU yüzeyi) geçtiyse mermi kaybolur
+            if (bu.z >= HALF_D + 40) state.bullets.splice(i, 1);
+          }
+        }
       }
 
       state.shakeT += dt;
@@ -1053,6 +1253,10 @@ export default function PingPong() {
       for (const rp of state.ripples) {
         items.push({ z: rp.cz, draw: () => drawRipple(rp) });
       }
+      // Mermiler — survival mod
+      for (const bu of state.bullets) {
+        items.push({ z: bu.z, draw: () => drawBullet(bu) });
+      }
       items.sort((a, b) => b.z - a.z);
       for (const it of items) it.draw();
 
@@ -1072,19 +1276,30 @@ export default function PingPong() {
         const padY = 9 * sc;
         const dividerH = 22 * sc;
 
-        const playerBlock = scoreW * 2 + digitGap;
-        const aiBlock = playerBlock;
+        const isSurvival = state.mode === MODE_SURVIVAL;
+        const playerDigits = isSurvival ? 4 : 2;
+        const playerBlock =
+          scoreW * playerDigits + digitGap * (playerDigits - 1);
+        const aiBlock = scoreW * 2 + digitGap;
         const timerBlock = timerW * 2 + digitGap;
-        const innerW =
-          playerBlock +
-          sectionGap +
-          1 +
-          sectionGap +
-          timerBlock +
-          sectionGap +
-          1 +
-          sectionGap +
-          aiBlock;
+        // Survival: 3 dot kapsamı için sabit alan
+        const dotR = Math.max(3.5, 4.5 * sc);
+        const dotGap = Math.max(7, 9 * sc);
+        const livesBlock =
+          SURVIVAL_LIVES * (dotR * 2) + (SURVIVAL_LIVES - 1) * dotGap;
+
+        const innerW = isSurvival
+          ? playerBlock + sectionGap + 1 + sectionGap + livesBlock
+          : playerBlock +
+            sectionGap +
+            1 +
+            sectionGap +
+            timerBlock +
+            sectionGap +
+            1 +
+            sectionGap +
+            aiBlock;
+
         const pillW = innerW + 2 * padX;
         const pillH = scoreH + 2 * padY;
         const pillX = state.width / 2 - pillW / 2;
@@ -1095,9 +1310,11 @@ export default function PingPong() {
 
         let cx = pillX + padX;
 
-        // Player score (mavi)
-        const playerStr = String(Math.min(99, state.score.player)).padStart(2, "0");
-        for (let i = 0; i < 2; i++) {
+        // Player score (mavi) — survival'da 4 hane, time'da 2 hane
+        const playerStr = String(
+          Math.min(Math.pow(10, playerDigits) - 1, state.score.player)
+        ).padStart(playerDigits, "0");
+        for (let i = 0; i < playerDigits; i++) {
           drawSevenSegDigit(
             ctx,
             cx + scoreW / 2,
@@ -1114,53 +1331,74 @@ export default function PingPong() {
         drawHudDivider(ctx, cx, cy, dividerH);
         cx += 1 + sectionGap;
 
-        // Timer — kalan saniye (renk son 10s'de amber, son 5s'de kırmızı + nabız)
-        const remainingMs = Math.max(0, GAME_DURATION - state.gameTime);
-        const secs = Math.min(99, Math.ceil(remainingMs / 1000));
-        const timerStr = String(secs).padStart(2, "0");
-        let timerColor;
-        let timerGlow;
-        if (secs <= 5 && (state.running || state.gameOver)) {
-          timerColor = "255, 100, 100";
-          timerGlow =
-            0.7 + 0.45 * Math.abs(Math.sin(state.gameTime * 0.012));
-        } else if (secs <= 10) {
-          timerColor = "255, 200, 80";
-          timerGlow = 0.4;
+        if (!isSurvival) {
+          // TIME — Timer (kalan saniye) + divider + CPU score
+          const remainingMs = Math.max(0, GAME_DURATION - state.gameTime);
+          const secs = Math.min(99, Math.ceil(remainingMs / 1000));
+          const timerStr = String(secs).padStart(2, "0");
+          let timerColor;
+          let timerGlow;
+          if (secs <= 5 && (state.running || state.gameOver)) {
+            timerColor = "255, 100, 100";
+            timerGlow =
+              0.7 + 0.45 * Math.abs(Math.sin(state.gameTime * 0.012));
+          } else if (secs <= 10) {
+            timerColor = "255, 200, 80";
+            timerGlow = 0.4;
+          } else {
+            timerColor = "235, 235, 240";
+            timerGlow = 0.18;
+          }
+          for (let i = 0; i < 2; i++) {
+            drawSevenSegDigit(
+              ctx,
+              cx + timerW / 2,
+              cy,
+              timerStr[i],
+              timerH,
+              timerColor,
+              timerGlow
+            );
+            cx += timerW + digitGap;
+          }
+
+          cx += sectionGap - digitGap;
+          drawHudDivider(ctx, cx, cy, dividerH);
+          cx += 1 + sectionGap;
+
+          // CPU score (kırmızı)
+          const aiStr = String(Math.min(99, state.score.ai)).padStart(2, "0");
+          for (let i = 0; i < 2; i++) {
+            drawSevenSegDigit(
+              ctx,
+              cx + scoreW / 2,
+              cy,
+              aiStr[i],
+              scoreH,
+              COLOR_AI,
+              0.45
+            );
+            cx += scoreW + digitGap;
+          }
         } else {
-          timerColor = "235, 235, 240";
-          timerGlow = 0.18;
-        }
-        for (let i = 0; i < 2; i++) {
-          drawSevenSegDigit(
-            ctx,
-            cx + timerW / 2,
-            cy,
-            timerStr[i],
-            timerH,
-            timerColor,
-            timerGlow
-          );
-          cx += timerW + digitGap;
-        }
-
-        cx += sectionGap - digitGap;
-        drawHudDivider(ctx, cx, cy, dividerH);
-        cx += 1 + sectionGap;
-
-        // AI score (kırmızı)
-        const aiStr = String(Math.min(99, state.score.ai)).padStart(2, "0");
-        for (let i = 0; i < 2; i++) {
-          drawSevenSegDigit(
-            ctx,
-            cx + scoreW / 2,
-            cy,
-            aiStr[i],
-            scoreH,
-            COLOR_AI,
-            0.45
-          );
-          cx += scoreW + digitGap;
+          // SURVIVAL — 3 can noktası
+          let dx = cx + dotR;
+          for (let i = 0; i < SURVIVAL_LIVES; i++) {
+            const isAlive = i < state.lives;
+            ctx.save();
+            if (isAlive) {
+              ctx.shadowColor = `rgba(${COLOR_PLAYER}, 0.55)`;
+              ctx.shadowBlur = 8;
+            }
+            ctx.fillStyle = isAlive
+              ? `rgba(${COLOR_PLAYER}, 1)`
+              : `rgba(${COLOR_PLAYER}, 0.18)`;
+            ctx.beginPath();
+            ctx.arc(dx, cy, dotR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            dx += dotR * 2 + dotGap;
+          }
         }
       }
 
@@ -1195,6 +1433,9 @@ export default function PingPong() {
   const shareText = (() => {
     const p = score.player;
     const a = score.ai;
+    if (mode === MODE_SURVIVAL) {
+      return `3D Ping Pong ARENA modunda ${p} puan yaptım!`;
+    }
     if (p > a) return `3D Ping Pong'da CPU'yu ${p}-${a} yendim!`;
     if (p < a) return `3D Ping Pong'da CPU ile ${p}-${a} maç yaptım.`;
     return `3D Ping Pong'da CPU ile ${p}-${a} berabere kaldık!`;
@@ -1227,18 +1468,30 @@ export default function PingPong() {
     } catch {}
   };
 
-  const onRestart = () => {
+  // Primary buton:
+  //  - Game over panelinde "TEKRAR OYNA" → başlangıç ekranına döner.
+  //  - Başlangıç panelinde "BAŞLA" → yeni tur başlatır.
+  const onPrimary = () => {
+    if (gameOver) {
+      setGameOver(false);
+      if (stateRef.current) stateRef.current.gameOver = false;
+      return;
+    }
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("pingpong-restart"));
+      window.dispatchEvent(
+        new CustomEvent("pingpong-restart", { detail: { mode } })
+      );
     }
   };
 
   const verdict =
-    score.player > score.ai
-      ? { text: "KAZANDIN", rgb: COLOR_PLAYER }
-      : score.player < score.ai
-        ? { text: "CPU KAZANDI", rgb: COLOR_AI }
-        : { text: "BERABERE", rgb: "200, 200, 210" };
+    mode === MODE_SURVIVAL
+      ? { text: "DAYANDIN", rgb: COLOR_PLAYER }
+      : score.player > score.ai
+        ? { text: "KAZANDIN", rgb: COLOR_PLAYER }
+        : score.player < score.ai
+          ? { text: "CPU KAZANDI", rgb: COLOR_AI }
+          : { text: "BERABERE", rgb: "200, 200, 210" };
 
   const canNativeShare =
     typeof navigator !== "undefined" && typeof navigator.share === "function";
@@ -1336,7 +1589,7 @@ export default function PingPong() {
               </div>
             </div>
 
-            {/* Alt başlık — duruma göre değişir */}
+            {/* Alt başlık — moda ve duruma göre değişir */}
             <div
               className="relative mt-1 text-center font-mono text-[10px] tracking-[0.32em] text-white/35"
               style={{
@@ -1344,30 +1597,85 @@ export default function PingPong() {
               }}
             >
               {gameOver
-                ? `ROUND COMPLETE · ${durationLabel}`
-                : `${durationLabel} · CPU'YU YEN`}
+                ? mode === MODE_SURVIVAL
+                  ? "TÜM CANLAR BİTTİ"
+                  : `ROUND COMPLETE · ${durationLabel}`
+                : mode === MODE_SURVIVAL
+                  ? `${SURVIVAL_LIVES} CAN · ATEŞ ET, DAYAN`
+                  : `${durationLabel} · CPU'YU YEN`}
             </div>
 
-            {/* Skor blokları — başlangıçta "--", bitişte gerçek skor */}
+            {/* Mod seçici — sadece başlangıç ekranında. Game over'da TEKRAR
+                OYNA butonu kullanıcıyı başlangıç ekranına geri getiriyor; mod
+                seçimi orada yapılıyor. */}
+            {!gameOver && (
+              <div
+                className="relative mt-6 flex justify-center"
+                style={{
+                  animation: "pingpong-flicker-in 0.45s ease-out 140ms both",
+                }}
+              >
+                <div className="inline-flex rounded-md border border-white/10 bg-white/[0.03] p-0.5">
+                  {[
+                    { k: MODE_TIME, label: "SÜRE" },
+                    { k: MODE_SURVIVAL, label: "ARENA" },
+                  ].map((opt) => {
+                    const active = mode === opt.k;
+                    return (
+                      <button
+                        key={opt.k}
+                        type="button"
+                        onClick={() => switchMode(opt.k)}
+                        className="px-3.5 py-1.5 rounded-[5px] font-mono text-[10px] tracking-[0.28em] uppercase transition cursor-pointer"
+                        style={{
+                          background: active
+                            ? "rgba(255,255,255,0.12)"
+                            : "transparent",
+                          color: active
+                            ? "rgba(255,255,255,0.95)"
+                            : "rgba(255,255,255,0.45)",
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Skor blokları */}
             <div
               className="relative mt-7 flex items-end justify-center gap-5"
               style={{
                 animation: "pingpong-flicker-in 0.5s ease-out 200ms both",
               }}
             >
-              <ScoreBlock
-                value={gameOver ? score.player : null}
-                rgb={COLOR_PLAYER}
-                label="SEN"
-              />
-              <div className="select-none pb-9 font-mono text-[34px] leading-none text-white/15">
-                ·
-              </div>
-              <ScoreBlock
-                value={gameOver ? score.ai : null}
-                rgb={COLOR_AI}
-                label="CPU"
-              />
+              {mode === MODE_SURVIVAL ? (
+                // Survival modunda tek büyük skor — 4 hane (yüksek puana yer)
+                <ScoreBlock
+                  value={gameOver ? score.player : null}
+                  rgb={COLOR_PLAYER}
+                  label="PUAN"
+                  digits={4}
+                />
+              ) : (
+                <>
+                  <ScoreBlock
+                    value={gameOver ? score.player : null}
+                    rgb={COLOR_PLAYER}
+                    label="SEN"
+                  />
+                  <div className="select-none pb-9 font-mono text-[34px] leading-none text-white/15">
+                    ·
+                  </div>
+                  <ScoreBlock
+                    value={gameOver ? score.ai : null}
+                    rgb={COLOR_AI}
+                    label="CPU"
+                  />
+                </>
+              )}
             </div>
 
             {/* Verdict badge — sadece game over'da */}
@@ -1405,7 +1713,7 @@ export default function PingPong() {
             >
               <button
                 type="button"
-                onClick={onRestart}
+                onClick={onPrimary}
                 className="group flex w-full items-center justify-center gap-2 rounded-md bg-white px-5 py-3.5 font-mono text-[12px] tracking-[0.3em] uppercase text-black transition cursor-pointer hover:bg-white/95"
               >
                 <span>{gameOver ? "TEKRAR OYNA" : "BAŞLA"}</span>

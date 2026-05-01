@@ -12,8 +12,9 @@ export default function ThemeToggle() {
     setTheme(current);
   }, []);
 
-  // Lab ve alt sayfalarında tema toggle gizli — oyun/deney ortamı her zaman koyu.
-  if (pathname && pathname.startsWith("/lab")) return null;
+  // Lab'in alt sayfalarında (oyun/deney ekranları) tema toggle gizli — Lab
+  // index sayfasında kalır. /lab/ trailing slash hala anasayfadır.
+  if (pathname && /^\/lab\/[^/]/.test(pathname)) return null;
 
   const toggle = () => {
     const next = theme === "light" ? "dark" : "light";

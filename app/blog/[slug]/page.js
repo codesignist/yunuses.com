@@ -1,5 +1,4 @@
 import ReadingProgress from "components/atoms/ReadingProgress";
-import SharePost from "components/atoms/SharePost";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
@@ -56,7 +55,7 @@ export default async function PostPage({ params }) {
   };
 
   return (
-    <main id="main" className="min-h-screen px-6 py-20 max-md:py-12 max-md:px-5">
+    <main id="main" className="px-6 py-20 max-md:py-12 max-md:px-5">
       <ReadingProgress />
       <script
         type="application/ld+json"
@@ -85,24 +84,6 @@ export default async function PostPage({ params }) {
           style={{ animationDelay: "120ms" }}
           dangerouslySetInnerHTML={{ __html: post.html }}
         />
-
-        <footer
-          className="mt-16 pt-8 border-t border-line flex items-center justify-between flex-wrap gap-4 animate-fade-in-up"
-          style={{ animationDelay: "240ms" }}
-        >
-          <div className="flex flex-wrap gap-x-3 gap-y-2 text-[13px] text-faint">
-            {post.tags &&
-              post.tags.map((tag, i) => (
-                <span key={tag} className="flex items-center gap-3">
-                  <span>#{tag}</span>
-                  {i < post.tags.length - 1 && (
-                    <span className="text-line">·</span>
-                  )}
-                </span>
-              ))}
-          </div>
-          <SharePost title={post.title} />
-        </footer>
       </article>
     </main>
   );

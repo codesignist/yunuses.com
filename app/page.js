@@ -1,7 +1,6 @@
 import AvatarLink from "components/atoms/AvatarLink";
 import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SocialAnchor from "components/atoms/SocialAnchor";
-import SocialArea from "components/organisms/SocialArea";
 import { formatDate, getAllPosts } from "lib/posts";
 import Link from "next/link";
 
@@ -84,6 +83,17 @@ export default function Home() {
             özel yazılımlar tasarlayıp geliştiriyoruz.
           </p>
           <p>
+            Boş zamanlarımda{" "}
+            <Link
+              href="/lab"
+              className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+            >
+              lab&apos;imde
+            </Link>{" "}
+            küçük 3D oyunlar ve görsel deneyler kuruyorum — Flash dönemimden
+            kalma bir alışkanlık.
+          </p>
+          <p>
             <Link
               href="/blog"
               className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
@@ -133,22 +143,6 @@ export default function Home() {
           </div>
         )}
 
-        <div
-          id="social"
-          className="mt-12 pt-8 border-t border-line animate-fade-in-up scroll-mt-8"
-          style={{ animationDelay: "400ms" }}
-        >
-          <SocialArea
-            data={{
-              next_sosyal: "https://nsosyal.com/codesignist",
-              youtube: "https://www.youtube.com/yunuses",
-              github: "https://github.com/codesignist",
-              linkedin: "https://www.linkedin.com/in/codesignist/",
-              twitter: "https://twitter.com/codesignist",
-              instagram: "https://www.instagram.com/codesignist",
-            }}
-          />
-        </div>
       </div>
     </main>
   );

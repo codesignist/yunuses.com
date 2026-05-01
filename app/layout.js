@@ -2,6 +2,7 @@ import "../styles/globals.css";
 import ThemeInit from "components/atoms/ThemeInit";
 import ThemeToggle from "components/atoms/ThemeToggle";
 import FullscreenToggle from "components/atoms/FullscreenToggle";
+import SiteFooter from "components/organisms/SiteFooter";
 import { Geist, Geist_Mono } from "next/font/google";
 
 const geistSans = Geist({
@@ -75,6 +76,7 @@ export default function RootLayout({ children }) {
         <ThemeToggle />
         <FullscreenToggle />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );
