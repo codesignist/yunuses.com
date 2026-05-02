@@ -36,6 +36,12 @@ export default function sitemap() {
       changeFrequency: "yearly",
       priority: 0.5,
     },
+    {
+      url: `${SITE_URL}/lab/camur/`,
+      lastModified: new Date("2026-05-02"),
+      changeFrequency: "yearly",
+      priority: 0.5,
+    },
   ];
 
   const postRoutes = posts.map((post) => ({

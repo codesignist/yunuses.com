@@ -13,6 +13,13 @@ export const metadata = {
 
 const experiments = [
   {
+    slug: "camur",
+    title: "Çamur",
+    summary:
+      "Slime mold (Physarum polycephalum) ajanları OpenStreetMap'ten alınan gerçek Kırklareli merkez haritası üzerinde mahalleleri birbirine bağlayıp kendiliğinden bir ulaşım ağı çiziyor.",
+    tag: "Simülasyon",
+  },
+  {
     slug: "3d-ping-pong",
     title: "3D Ping Pong",
     summary:
