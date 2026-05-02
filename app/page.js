@@ -1,7 +1,6 @@
 import AvatarLink from "components/atoms/AvatarLink";
 import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SocialAnchor from "components/atoms/SocialAnchor";
-import SocialArea from "components/organisms/SocialArea";
 import { formatDate, getAllPosts } from "lib/posts";
 import Link from "next/link";
 
@@ -38,7 +37,7 @@ export default function Home() {
   const latestPost = getAllPosts()[0];
 
   return (
-    <main id="main" className="min-h-screen flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
+    <main id="main" className="flex-1 flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(personSchema) }}
@@ -94,7 +93,14 @@ export default function Home() {
             <SocialAnchor className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors">
               sosyal medya hesaplarımdan
             </SocialAnchor>{" "}
-            beni takip edebilirsiniz.
+            beni takip edebilir ve{" "}
+            <Link
+              href="/lab"
+              className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+            >
+              lab
+            </Link>&apos;deki oyun ve deneyleri{" "}
+            inceleyebilirsiniz.
           </p>
         </div>
 
@@ -133,22 +139,6 @@ export default function Home() {
           </div>
         )}
 
-        <div
-          id="social"
-          className="mt-12 pt-8 border-t border-line animate-fade-in-up scroll-mt-8"
-          style={{ animationDelay: "400ms" }}
-        >
-          <SocialArea
-            data={{
-              next_sosyal: "https://nsosyal.com/codesignist",
-              youtube: "https://www.youtube.com/yunuses",
-              github: "https://github.com/codesignist",
-              linkedin: "https://www.linkedin.com/in/codesignist/",
-              twitter: "https://twitter.com/codesignist",
-              instagram: "https://www.instagram.com/codesignist",
-            }}
-          />
-        </div>
       </div>
     </main>
   );

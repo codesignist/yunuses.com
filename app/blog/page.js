@@ -14,7 +14,7 @@ export default function BlogIndex() {
   const posts = getAllPosts();
 
   return (
-    <main id="main" className="min-h-screen px-6 py-20 max-md:py-12 max-md:px-5">
+    <main id="main" className="flex-1 px-6 py-20 max-md:py-12 max-md:px-5">
       <div className="w-full max-w-[680px] mx-auto">
         <header className="mb-16 max-md:mb-12 animate-fade-in-up">
           <Link

@@ -24,6 +24,18 @@ export default function sitemap() {
       changeFrequency: "yearly",
       priority: 0.7,
     },
+    {
+      url: `${SITE_URL}/lab/`,
+      lastModified: new Date("2026-04-30"),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    {
+      url: `${SITE_URL}/lab/3d-ping-pong/`,
+      lastModified: new Date("2026-04-30"),
+      changeFrequency: "yearly",
+      priority: 0.5,
+    },
   ];
 
   const postRoutes = posts.map((post) => ({

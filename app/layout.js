@@ -1,6 +1,8 @@
 import "../styles/globals.css";
 import ThemeInit from "components/atoms/ThemeInit";
 import ThemeToggle from "components/atoms/ThemeToggle";
+import FullscreenToggle from "components/atoms/FullscreenToggle";
+import SiteFooter from "components/organisms/SiteFooter";
 import { Geist, Geist_Mono } from "next/font/google";
 
 const geistSans = Geist({
@@ -63,7 +65,7 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
-      <body>
+      <body className="flex flex-col min-h-screen">
         <ThemeInit />
         <a
           href="#main"
@@ -72,7 +74,9 @@ export default function RootLayout({ children }) {
           İçeriğe geç
         </a>
         <ThemeToggle />
+        <FullscreenToggle />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );
