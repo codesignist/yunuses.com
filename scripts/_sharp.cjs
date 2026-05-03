@@ -1,0 +1,1 @@
+module.exports = require("../node_modules/.pnpm/sharp@0.34.5/node_modules/sharp");

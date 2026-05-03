@@ -26,7 +26,7 @@ export const metadata = {
   metadataBase: new URL("https://yunuses.com"),
   title: "Yunus Eş",
   description,
-  icons: { icon: "/favicon.ico" },
+  manifest: "/site.webmanifest",
   openGraph: {
     type: "website",
     siteName: title,
