@@ -12,15 +12,15 @@ const lonToX = (lon) => ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * W;
 const latToY = (lat) => ((LAT_MAX - lat) / (LAT_MAX - LAT_MIN)) * H;
 
 function buildColormap() {
-  // Slime izi: gece cam göğü mavisi → cyan → soluk beyaz. Su rengiyle
-  // (saturated navy) ayrışsın diye cyan ucuna kaydırdık.
+  // Slime izi: koyu bordo → kızıl → mercan → soluk pembe. Su (navy) ve
+  // bina (gri) ile yüksek kontrast olsun diye sıcak palet seçildi.
   const stops = [
     [0, [8, 10, 14]],
-    [55, [18, 38, 56]],
-    [125, [40, 110, 150]],
-    [185, [95, 180, 215]],
-    [225, [170, 225, 240]],
-    [255, [220, 245, 250]],
+    [55, [55, 14, 20]],
+    [125, [170, 38, 50]],
+    [185, [235, 90, 95]],
+    [225, [248, 170, 160]],
+    [255, [252, 232, 220]],
   ];
   const map = new Uint8ClampedArray(256 * 3);
   for (let i = 0; i < 256; i++) {
@@ -45,7 +45,7 @@ function buildColormap() {
 const COLORMAP = buildColormap();
 
 // Base map paleti — şehrin dokusu okunabilir olsun diye binalar net gri,
-// su saturated navy, kara koyu. Slime izi (cyan/sky-blue colormap) bunların
+// su saturated navy, kara koyu. Slime izi (kızıl colormap) bunların
 // üstüne organik akış olarak biniyor.
 const COLOR_LAND = [8, 10, 14];
 const COLOR_BUILDING_FILL = [34, 41, 54];
@@ -124,12 +124,28 @@ function buildLayers() {
   }
   const walkable = new Int32Array(walkableTmp);
 
+  // Besin kaynakları — mahalle merkezleri (Tokyo metro tarzı). Her mahalle
+  // bir gauss spot; ajanlar mahalleler arasında bağlantı kurmaya çalışırken
+  // bina blokları engel olduğu için doğal olarak sokak hatlarına oturur.
+  const foodCanvas = document.createElement("canvas");
+  foodCanvas.width = W;
+  foodCanvas.height = H;
+  const fdc = foodCanvas.getContext("2d", { willReadFrequently: true });
+  fdc.fillStyle = "#fff";
+  for (const s of data.settlements) {
+    const x = lonToX(s.lon);
+    const y = latToY(s.lat);
+    const r = 26 + (s.w ?? 1) * 6;
+    fdc.beginPath();
+    fdc.arc(x, y, r, 0, Math.PI * 2);
+    fdc.fill();
+  }
   const blurCanvas = document.createElement("canvas");
   blurCanvas.width = W;
   blurCanvas.height = H;
   const fbc = blurCanvas.getContext("2d", { willReadFrequently: true });
-  fbc.filter = "blur(60px)";
-  fbc.drawImage(bldgCanvas, 0, 0);
+  fbc.filter = "blur(140px)";
+  fbc.drawImage(foodCanvas, 0, 0);
   fbc.filter = "none";
   const fImg = fbc.getImageData(0, 0, W, H);
   const foodMap = new Float32Array(W * H);
@@ -548,20 +564,10 @@ export default function Camur() {
       if (cancelled) return;
       const NW = walkable.length;
 
+      // Uniform seed — ajanlar walkable alana eşit dağılır, besin
+      // gradyanını takip ederek mahallelere doğru çekilirler.
       const agents = new Float32Array(N_AGENTS * 3);
       let placed = 0;
-      let safety = 0;
-      while (placed < N_AGENTS && safety < N_AGENTS * 80) {
-        safety++;
-        const idx = walkable[(Math.random() * NW) | 0];
-        if (foodMap[idx] < Math.random() * 0.85) continue;
-        const x = (idx % W) + 0.5;
-        const y = ((idx / W) | 0) + 0.5;
-        agents[placed * 3] = x;
-        agents[placed * 3 + 1] = y;
-        agents[placed * 3 + 2] = Math.random() * Math.PI * 2;
-        placed++;
-      }
       while (placed < N_AGENTS) {
         const idx = walkable[(Math.random() * NW) | 0];
         const x = (idx % W) + 0.5;
@@ -571,7 +577,6 @@ export default function Camur() {
         agents[placed * 3 + 2] = Math.random() * Math.PI * 2;
         placed++;
       }
-
       let trail = new Float32Array(W * H);
       let trailH = new Float32Array(W * H);
       let trailNext = new Float32Array(W * H);
