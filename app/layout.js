@@ -1,4 +1,5 @@
 import "../styles/globals.css";
+import Script from "next/script";
 import ThemeInit from "components/atoms/ThemeInit";
 import ThemeToggle from "components/atoms/ThemeToggle";
 import FullscreenToggle from "components/atoms/FullscreenToggle";
@@ -77,6 +78,11 @@ export default function RootLayout({ children }) {
         <FullscreenToggle />
         {children}
         <SiteFooter />
+        <Script
+          src="https://analytics.yunuses.com/script.js"
+          data-website-id="c903e81f-fc77-4e75-b2cb-e97f985047ab"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
