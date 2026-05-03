@@ -53,25 +53,7 @@ const COLOR_BUILDING_EDGE = [62, 74, 92];
 const COLOR_WATER = [22, 56, 96];
 const COLOR_WATER_EDGE = [40, 92, 140];
 
-// Yükselti tile koordinatları — AWS Terrarium PNG, zoom 12, x=2357.
-// Y aralığı 1522-1524 = 3 tile, ~768px composite, ~120m çözünürlük.
-const COMP_W = 256;
-const COMP_H = 768;
-const COMP_LAT_TOP = 41.84395;
-const COMP_LAT_BOT = 41.70061;
-const COMP_LON_LEFT = 27.15820;
-const COMP_LON_RIGHT = 27.24609;
-
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Failed to load ${src}`));
-    img.src = src;
-  });
-}
-
-async function buildLayers() {
+function buildLayers() {
   const bldgCanvas = document.createElement("canvas");
   bldgCanvas.width = W;
   bldgCanvas.height = H;
@@ -271,73 +253,7 @@ async function buildLayers() {
   const visualImg = vc.getImageData(0, 0, W, H);
   const basePixels = new Uint8ClampedArray(visualImg.data);
 
-  // Yükselti — 3 Terrarium PNG tile'ı yükle, dikey stitch et, RGB'den
-  // metre cinsine çevir. Slope (gradient magnitude) → mobility (1=düz, 0.4=dik).
-  // Ajan algoritması mobility'yi sense ve deposit'e çarpan olarak kullanıyor:
-  // dik yamaç = trail değeri düşer = oradan kaçılır. Sonuç: ağ kontur eğrilerini
-  // takip eder, gerçek caddeler gibi.
-  const tiles = await Promise.all(
-    [1522, 1523, 1524].map((y) => loadImage(`/lab/camur/elevation/12_2357_${y}.png`))
-  );
-  const compCanvas = document.createElement("canvas");
-  compCanvas.width = COMP_W;
-  compCanvas.height = COMP_H;
-  const cc = compCanvas.getContext("2d", { willReadFrequently: true });
-  for (let i = 0; i < 3; i++) cc.drawImage(tiles[i], 0, i * 256);
-  const elevImg = cc.getImageData(0, 0, COMP_W, COMP_H);
-
-  const elev = new Float32Array(COMP_W * COMP_H);
-  for (let i = 0; i < COMP_W * COMP_H; i++) {
-    const r = elevImg.data[i * 4];
-    const g = elevImg.data[i * 4 + 1];
-    const b = elevImg.data[i * 4 + 2];
-    elev[i] = r * 256 + g + b / 256 - 32768;
-  }
-
-  const compSlope = new Float32Array(COMP_W * COMP_H);
-  let maxSlope = 0;
-  for (let y = 1; y < COMP_H - 1; y++) {
-    for (let x = 1; x < COMP_W - 1; x++) {
-      const i = y * COMP_W + x;
-      const dx = (elev[i + 1] - elev[i - 1]) * 0.5;
-      const dy = (elev[i + COMP_W] - elev[i - COMP_W]) * 0.5;
-      const s = Math.hypot(dx, dy);
-      compSlope[i] = s;
-      if (s > maxSlope) maxSlope = s;
-    }
-  }
-  // Composite'in kendi içinde 95th percentile bulup ona göre normalize edelim
-  // ki tek bir aşırı dik nokta tüm haritayı düzleştirmesin.
-  // Basit yaklaşım: maxSlope'un 0.6'sını referans al.
-  const slopeRef = maxSlope * 0.6 || 1;
-
-  // Mobility — sim grid'e upsampled. 1.0 düz, 0.35 en dik.
-  const mobility = new Float32Array(W * H);
-  const xScale = ((LON_MAX - LON_MIN) / (COMP_LON_RIGHT - COMP_LON_LEFT)) * (COMP_W / W);
-  const xOffset =
-    ((LON_MIN - COMP_LON_LEFT) / (COMP_LON_RIGHT - COMP_LON_LEFT)) * COMP_W;
-  const yScale = ((LAT_MAX - LAT_MIN) / (COMP_LAT_TOP - COMP_LAT_BOT)) * (COMP_H / H);
-  const yOffset =
-    ((COMP_LAT_TOP - LAT_MAX) / (COMP_LAT_TOP - COMP_LAT_BOT)) * COMP_H;
-  for (let y = 0; y < H; y++) {
-    const py = y * yScale + yOffset;
-    let iy = py | 0;
-    if (iy < 0) iy = 0;
-    else if (iy >= COMP_H) iy = COMP_H - 1;
-    const compRow = iy * COMP_W;
-    const wRow = y * W;
-    for (let x = 0; x < W; x++) {
-      const px = x * xScale + xOffset;
-      let ix = px | 0;
-      if (ix < 0) ix = 0;
-      else if (ix >= COMP_W) ix = COMP_W - 1;
-      const s = compSlope[compRow + ix] / slopeRef;
-      const m = 1 - 0.65 * (s > 1 ? 1 : s);
-      mobility[wRow + x] = m;
-    }
-  }
-
-  return { obstacleMask, foodMap, walkable, basePixels, mobility };
+  return { obstacleMask, foodMap, walkable, basePixels };
 }
 
 const DEFAULT_AGENTS = 8000;
@@ -627,10 +543,9 @@ export default function Camur() {
     let raf;
     let cancelled = false;
 
-    (async () => {
-      const layers = await buildLayers();
+    (() => {
+      const { obstacleMask, foodMap, walkable, basePixels } = buildLayers();
       if (cancelled) return;
-      const { obstacleMask, foodMap, walkable, basePixels, mobility } = layers;
       const NW = walkable.length;
 
       const agents = new Float32Array(N_AGENTS * 3);
@@ -663,16 +578,13 @@ export default function Camur() {
       const imgData = ctx.createImageData(W, H);
       imgData.data.set(basePixels);
 
-      // Mobility hem sense'e (dik yamaç = az çekici) hem deposit'e (dik
-      // yamaçta az iz bırakılır) çarpan olarak giriyor. İkisi birleşince
-      // ağ doğal olarak konturları takip eder.
       function sense(x, y) {
         const ix = x | 0;
         const iy = y | 0;
         if (ix < 0 || ix >= W || iy < 0 || iy >= H) return -1;
         const idx = iy * W + ix;
         if (obstacleMask[idx]) return -1;
-        return (trail[idx] + foodMap[idx] * FOOD_WEIGHT) * mobility[idx];
+        return trail[idx] + foodMap[idx] * FOOD_WEIGHT;
       }
 
       function tick() {
@@ -715,8 +627,7 @@ export default function Camur() {
           } else {
             x = nx;
             y = ny;
-            const cellIdx = iy * W + ix;
-            trail[cellIdx] += DEPOSIT * mobility[cellIdx];
+            trail[iy * W + ix] += DEPOSIT;
           }
 
           agents[i3] = x;
