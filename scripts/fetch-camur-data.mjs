@@ -169,6 +169,7 @@ out skel qt;`;
   const data = await overpass(q);
   const nodes = buildNodeMap(data.elements);
   const groups = { major: [], residential: [], service: [], track: [] };
+  const bridges = [];
   for (const el of data.elements) {
     if (el.type !== "way") continue;
     const t = el.tags || {};
@@ -204,8 +205,13 @@ out skel qt;`;
     } else if (hw === "track") {
       groups.track.push(coords);
     }
+    // Köprüler — yol kategorisi ne olursa olsun ayrı array'e de eklensin
+    // ki renderer su mask'inden kazıyabilsin.
+    if (t.bridge && t.bridge !== "no") {
+      bridges.push(coords);
+    }
   }
-  return groups;
+  return { groups, bridges };
 }
 
 async function fetchSettlements() {
@@ -252,13 +258,14 @@ out body;`;
   console.log("  ", water.waterPolys.length, "polygon,", water.waterLines.length, "line");
 
   console.log("Yol çekiliyor...");
-  const roads = await fetchRoads();
+  const { groups: roads, bridges } = await fetchRoads();
   console.log(
     "  ",
     "major=" + roads.major.length,
     "residential=" + roads.residential.length,
     "service=" + roads.service.length,
-    "track=" + roads.track.length
+    "track=" + roads.track.length,
+    "bridges=" + bridges.length
   );
 
   console.log("Yerleşim çekiliyor...");
@@ -273,6 +280,7 @@ out body;`;
     waterPolys: water.waterPolys,
     buildings,
     roads,
+    bridges,
   };
 
   fs.writeFileSync(OUT, JSON.stringify(dataset));

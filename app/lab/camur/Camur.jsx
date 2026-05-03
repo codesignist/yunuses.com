@@ -109,6 +109,29 @@ function buildLayers() {
     }
     wc.stroke();
   }
+  // Köprüler — su şeritlerinin üstüne destination-out ile silinerek yol açılır,
+  // böylece su mask'i köprünün altında kesilir ve ajanlar geçebilir.
+  if (data.bridges && data.bridges.length) {
+    wc.globalCompositeOperation = "destination-out";
+    wc.strokeStyle = "#000";
+    wc.lineWidth = 9;
+    wc.lineCap = "round";
+    wc.lineJoin = "round";
+    for (const line of data.bridges) {
+      if (!line || line.length < 2) continue;
+      wc.beginPath();
+      for (let i = 0; i < line.length; i++) {
+        const [lon, lat] = line[i];
+        const x = lonToX(lon);
+        const y = latToY(lat);
+        if (i === 0) wc.moveTo(x, y);
+        else wc.lineTo(x, y);
+      }
+      wc.stroke();
+    }
+    wc.globalCompositeOperation = "source-over";
+  }
+
   const waterImg = wc.getImageData(0, 0, W, H);
   const waterMask = new Uint8Array(W * H);
   for (let i = 0; i < W * H; i++) {
@@ -124,41 +147,48 @@ function buildLayers() {
   }
   const walkable = new Int32Array(walkableTmp);
 
-  // Besin kaynakları — mahalle merkezleri (Tokyo metro tarzı). Her mahalle
-  // bir gauss spot; ajanlar mahalleler arasında bağlantı kurmaya çalışırken
-  // bina blokları engel olduğu için doğal olarak sokak hatlarına oturur.
-  const foodCanvas = document.createElement("canvas");
-  foodCanvas.width = W;
-  foodCanvas.height = H;
-  const fdc = foodCanvas.getContext("2d", { willReadFrequently: true });
-  fdc.fillStyle = "#fff";
+  // İki ayrı besin haritası — ajanlar ikisinin ağırlıklı toplamına çekilir.
+  // settlementFood: mahalle merkezleri, geniş gauss spot (Tokyo metro tarzı).
+  // buildingFood: bina yoğunluğu — küçük blur, lokal urban density gradyanı.
+  // Ağırlıklar runtime'da slider ile değişiyor (rebuild gerekmiyor).
+  const buildBlurredAlpha = (sourceCanvas, blurPx) => {
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const cx = c.getContext("2d", { willReadFrequently: true });
+    cx.filter = `blur(${blurPx}px)`;
+    cx.drawImage(sourceCanvas, 0, 0);
+    cx.filter = "none";
+    const img = cx.getImageData(0, 0, W, H);
+    const arr = new Float32Array(W * H);
+    let mx = 0;
+    for (let i = 0; i < W * H; i++) {
+      const v = img.data[i * 4 + 3];
+      arr[i] = v;
+      if (v > mx) mx = v;
+    }
+    if (mx > 0) {
+      const inv = 1 / mx;
+      for (let i = 0; i < W * H; i++) arr[i] *= inv;
+    }
+    return arr;
+  };
+
+  const settlementCanvas = document.createElement("canvas");
+  settlementCanvas.width = W;
+  settlementCanvas.height = H;
+  const sc = settlementCanvas.getContext("2d", { willReadFrequently: true });
+  sc.fillStyle = "#fff";
   for (const s of data.settlements) {
     const x = lonToX(s.lon);
     const y = latToY(s.lat);
     const r = 26 + (s.w ?? 1) * 6;
-    fdc.beginPath();
-    fdc.arc(x, y, r, 0, Math.PI * 2);
-    fdc.fill();
+    sc.beginPath();
+    sc.arc(x, y, r, 0, Math.PI * 2);
+    sc.fill();
   }
-  const blurCanvas = document.createElement("canvas");
-  blurCanvas.width = W;
-  blurCanvas.height = H;
-  const fbc = blurCanvas.getContext("2d", { willReadFrequently: true });
-  fbc.filter = "blur(140px)";
-  fbc.drawImage(foodCanvas, 0, 0);
-  fbc.filter = "none";
-  const fImg = fbc.getImageData(0, 0, W, H);
-  const foodMap = new Float32Array(W * H);
-  let maxF = 0;
-  for (let i = 0; i < W * H; i++) {
-    const v = fImg.data[i * 4 + 3];
-    foodMap[i] = v;
-    if (v > maxF) maxF = v;
-  }
-  if (maxF > 0) {
-    const inv = 1 / maxF;
-    for (let i = 0; i < W * H; i++) foodMap[i] *= inv;
-  }
+  const settlementFood = buildBlurredAlpha(settlementCanvas, 140);
+  const buildingFood = buildBlurredAlpha(bldgCanvas, 40);
 
   // Visual base — bina ve sular ayrı bir canvas'ta gerçek dolgu + ince
   // outline ile çiziliyor. Anti-aliased kenarlar şehir dokusunu okunabilir
@@ -219,6 +249,28 @@ function buildLayers() {
     vc.stroke();
   }
 
+  // Köprüler — su şeritlerinin üstüne kara rengiyle bant çizip nehri kesiyoruz.
+  // Yol overlay'i sonra üstüne biniyor. Bu sayede köprü görsel olarak da
+  // toprak kesintisi gibi görünüyor.
+  if (data.bridges && data.bridges.length) {
+    vc.strokeStyle = rgbStr(COLOR_LAND);
+    vc.lineWidth = 9;
+    vc.lineCap = "round";
+    vc.lineJoin = "round";
+    for (const line of data.bridges) {
+      if (!line || line.length < 2) continue;
+      vc.beginPath();
+      for (let i = 0; i < line.length; i++) {
+        const [lon, lat] = line[i];
+        const x = lonToX(lon);
+        const y = latToY(lat);
+        if (i === 0) vc.moveTo(x, y);
+        else vc.lineTo(x, y);
+      }
+      vc.stroke();
+    }
+  }
+
   // Yollar — düşük hiyerarşiden yükseğe çiziliyor (büyük caddeler en üstte).
   // Track (orman/tarla yolu) atlandı; service/residential/major çizilir.
   const drawRoadGroup = (group, stroke, width) => {
@@ -269,13 +321,19 @@ function buildLayers() {
   const visualImg = vc.getImageData(0, 0, W, H);
   const basePixels = new Uint8ClampedArray(visualImg.data);
 
-  return { obstacleMask, foodMap, walkable, basePixels };
+  return { obstacleMask, settlementFood, buildingFood, walkable, basePixels };
 }
 
 const DEFAULT_AGENTS = 8000;
 const AGENTS_MIN = 1500;
 const AGENTS_MAX = 30000;
 const AGENTS_STEP = 500;
+
+const DEFAULT_SETT_W = 110;
+const DEFAULT_BLDG_W = 25;
+const WEIGHT_MIN = 0;
+const WEIGHT_MAX = 200;
+const WEIGHT_STEP = 5;
 
 const ZOOM_MIN_FACTOR = 0.95;
 const ZOOM_MAX_FACTOR = 12;
@@ -295,6 +353,19 @@ export default function Camur() {
   const showLabelsRef = useRef(true);
   const [agentCount, setAgentCount] = useState(DEFAULT_AGENTS);
   const [draftAgents, setDraftAgents] = useState(DEFAULT_AGENTS);
+
+  // Çekim ağırlıkları — slider'lar bunları canlı değiştirir, foodMap rebuild
+  // gerekmez. Ref'lere yazıp simulasyon tick'inde okuyoruz.
+  const [settWeight, setSettWeight] = useState(DEFAULT_SETT_W);
+  const [bldgWeight, setBldgWeight] = useState(DEFAULT_BLDG_W);
+  const settWeightRef = useRef(DEFAULT_SETT_W);
+  const bldgWeightRef = useRef(DEFAULT_BLDG_W);
+  useEffect(() => {
+    settWeightRef.current = settWeight;
+  }, [settWeight]);
+  useEffect(() => {
+    bldgWeightRef.current = bldgWeight;
+  }, [bldgWeight]);
 
   // Etiketleri container koordinat uzayında, sabit 16px font ile çiziyoruz —
   // stage transform'undan etkilenmesin, zoom yapılsa da yazı büyümesin.
@@ -553,14 +624,14 @@ export default function Camur() {
     const STEP = 1.4;
     const DEPOSIT = 1.4;
     const DECAY = 0.962;
-    const FOOD_WEIGHT = 110;
     const TRAIL_TO_BYTE = 32;
 
     let raf;
     let cancelled = false;
 
     (() => {
-      const { obstacleMask, foodMap, walkable, basePixels } = buildLayers();
+      const { obstacleMask, settlementFood, buildingFood, walkable, basePixels } =
+        buildLayers();
       if (cancelled) return;
       const NW = walkable.length;
 
@@ -583,17 +654,23 @@ export default function Camur() {
       const imgData = ctx.createImageData(W, H);
       imgData.data.set(basePixels);
 
+      // Ağırlıkları her tick'in başında ref'ten okuyup local kopyaya alıyoruz
+      // ki sense() içindeki sıkı döngü deref maliyeti ödemesin.
+      let sw = settWeightRef.current;
+      let bw = bldgWeightRef.current;
       function sense(x, y) {
         const ix = x | 0;
         const iy = y | 0;
         if (ix < 0 || ix >= W || iy < 0 || iy >= H) return -1;
         const idx = iy * W + ix;
         if (obstacleMask[idx]) return -1;
-        return trail[idx] + foodMap[idx] * FOOD_WEIGHT;
+        return trail[idx] + settlementFood[idx] * sw + buildingFood[idx] * bw;
       }
 
       function tick() {
         if (cancelled) return;
+        sw = settWeightRef.current;
+        bw = bldgWeightRef.current;
 
         for (let i = 0; i < N_AGENTS; i++) {
           const i3 = i * 3;
@@ -779,11 +856,43 @@ export default function Camur() {
               onChange={(e) => setDraftAgents(+e.target.value)}
               onPointerUp={() => setAgentCount(draftAgents)}
               onKeyUp={() => setAgentCount(draftAgents)}
-              className="w-24 accent-[#87b4d7] cursor-pointer"
+              className="w-24 accent-[#e5645f] cursor-pointer"
               aria-label="Ajan sayısı"
             />
-            <span className="text-white/85 tabular-nums w-12 text-right">
+            <span className="text-white/85 tabular-nums w-10 text-right">
               {draftAgents.toLocaleString("tr-TR")}
+            </span>
+          </label>
+          <label className="flex items-center gap-2 px-3 text-white/65">
+            <span className="text-white/55">Mahalle</span>
+            <input
+              type="range"
+              min={WEIGHT_MIN}
+              max={WEIGHT_MAX}
+              step={WEIGHT_STEP}
+              value={settWeight}
+              onChange={(e) => setSettWeight(+e.target.value)}
+              className="w-20 accent-[#e5645f] cursor-pointer"
+              aria-label="Mahalle çekim ağırlığı"
+            />
+            <span className="text-white/85 tabular-nums w-7 text-right">
+              {settWeight}
+            </span>
+          </label>
+          <label className="flex items-center gap-2 px-3 text-white/65">
+            <span className="text-white/55">Bina</span>
+            <input
+              type="range"
+              min={WEIGHT_MIN}
+              max={WEIGHT_MAX}
+              step={WEIGHT_STEP}
+              value={bldgWeight}
+              onChange={(e) => setBldgWeight(+e.target.value)}
+              className="w-20 accent-[#e5645f] cursor-pointer"
+              aria-label="Bina çekim ağırlığı"
+            />
+            <span className="text-white/85 tabular-nums w-7 text-right">
+              {bldgWeight}
             </span>
           </label>
           <button
