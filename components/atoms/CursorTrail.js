@@ -42,12 +42,18 @@ export default function CursorTrail() {
     const trail = Array.from({ length: POINTS }, () => ({
       x: tracker.x,
       y: tracker.y,
+      fixed: false,
     }));
 
     let active = false;
     let hoveredLink = null;
     let orbitAngle = 0;
     let strokeRGB = "250, 250, 250";
+    let mouseOverFixed = false;
+    // elementFromPoint sonucunu son kez gördüğümüz element için cache'liyoruz —
+    // her mousemove'da parent zincirini yeniden yürümeyelim.
+    let lastFixedEl = null;
+    let lastFixedResult = false;
 
     const readStrokeColor = () => {
       const hex = getComputedStyle(document.documentElement)
@@ -62,16 +68,37 @@ export default function CursorTrail() {
     const onThemeChange = () => readStrokeColor();
     window.addEventListener("themechange", onThemeChange);
 
-    const detectLink = (clientX, clientY) => {
+    const isInFixedTree = (el) => {
+      let cur = el;
+      while (cur && cur !== document.body) {
+        const pos = getComputedStyle(cur).position;
+        if (pos === "fixed" || pos === "sticky") return true;
+        cur = cur.parentElement;
+      }
+      return false;
+    };
+
+    const detectContext = (clientX, clientY) => {
       const el = document.elementFromPoint(clientX, clientY);
-      return el ? el.closest("a, button") : null;
+      const link = el ? el.closest("a, button") : null;
+      let fixed;
+      if (el === lastFixedEl) {
+        fixed = lastFixedResult;
+      } else {
+        fixed = el ? isInFixedTree(el) : false;
+        lastFixedEl = el;
+        lastFixedResult = fixed;
+      }
+      return { link, fixed };
     };
 
     const onMove = (e) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
       active = true;
-      const newLink = detectLink(e.clientX, e.clientY);
+      const ctx = detectContext(e.clientX, e.clientY);
+      mouseOverFixed = ctx.fixed;
+      const newLink = ctx.link;
       if (newLink !== hoveredLink) {
         if (newLink) {
           // Yeni linke girince yörüngeyi imlecin geldiği açıdan başlat —
@@ -92,21 +119,50 @@ export default function CursorTrail() {
       tracker.y = mouse.y;
       velocity.x = 0;
       velocity.y = 0;
+      const ctx = detectContext(e.clientX, e.clientY);
+      mouseOverFixed = ctx.fixed;
       for (const p of trail) {
         p.x = mouse.x;
         p.y = mouse.y;
+        p.fixed = ctx.fixed;
       }
       active = true;
-      hoveredLink = detectLink(e.clientX, e.clientY);
+      hoveredLink = ctx.link;
     };
     const onLeave = () => {
       active = false;
       hoveredLink = null;
+      mouseOverFixed = false;
     };
 
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseenter", onEnter);
     window.addEventListener("mouseleave", onLeave);
+
+    // Trail noktaları viewport koordinatında saklandığından, canvas fixed iken
+    // scroll'da geride kalan izler "camda" duruyormuş gibi hissettiriyor.
+    // Scroll delta'sını trail/tracker'dan düşerek izleri sayfaya yapıştırıyoruz —
+    // baş, elastik takip ile sonraki birkaç frame'de imlece geri yetişir.
+    let lastScrollX = window.scrollX;
+    let lastScrollY = window.scrollY;
+    const onScroll = () => {
+      const dx = window.scrollX - lastScrollX;
+      const dy = window.scrollY - lastScrollY;
+      lastScrollX = window.scrollX;
+      lastScrollY = window.scrollY;
+      if (dx === 0 && dy === 0) return;
+      // Fixed alt ağaçtaki noktalar viewport'a yapışık — onları öteleme.
+      if (!mouseOverFixed) {
+        tracker.x -= dx;
+        tracker.y -= dy;
+      }
+      for (const p of trail) {
+        if (p.fixed) continue;
+        p.x -= dx;
+        p.y -= dy;
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     let raf = 0;
     const loop = () => {
@@ -138,7 +194,7 @@ export default function CursorTrail() {
       tracker.y += velocity.y * ELASTIC_OUTER;
 
       trail.shift();
-      trail.push({ x: tracker.x, y: tracker.y });
+      trail.push({ x: tracker.x, y: tracker.y, fixed: mouseOverFixed });
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -181,6 +237,7 @@ export default function CursorTrail() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseenter", onEnter);
       window.removeEventListener("mouseleave", onLeave);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", resize);
       window.removeEventListener("themechange", onThemeChange);
     };
