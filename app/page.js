@@ -1,5 +1,4 @@
 import AvatarLink from "components/atoms/AvatarLink";
-import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SocialAnchor from "components/atoms/SocialAnchor";
 import { formatDate, getAllPosts } from "lib/posts";
 import Link from "next/link";
@@ -42,7 +41,6 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(personSchema) }}
       />
-      <CursorTrailLoader />
       <div className="w-full max-w-[560px]">
         <div className="flex items-center gap-6">
           <AvatarLink />

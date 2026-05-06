@@ -3,6 +3,8 @@ import Script from "next/script";
 import ThemeInit from "components/atoms/ThemeInit";
 import ThemeToggle from "components/atoms/ThemeToggle";
 import FullscreenToggle from "components/atoms/FullscreenToggle";
+import CursorTrailToggle from "components/atoms/CursorTrailToggle";
+import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SiteFooter from "components/organisms/SiteFooter";
 import { Geist, Geist_Mono } from "next/font/google";
 
@@ -74,8 +76,10 @@ export default function RootLayout({ children }) {
         >
           İçeriğe geç
         </a>
+        <CursorTrailToggle />
         <ThemeToggle />
         <FullscreenToggle />
+        <CursorTrailLoader />
         {children}
         <SiteFooter />
         <Script
