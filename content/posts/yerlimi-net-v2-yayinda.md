@@ -3,6 +3,7 @@ title: Yerlimi.net v2 Yayında
 date: 2026-05-06
 summary: Yerlimi.net'in yeni sürümünü yayına aldık. Barkod okuyucu, çok daha hızlı arama, daha fazla yerli marka ve ülkeye göre listeleme gibi pek çok yeni özellikle birlikte.
 tags: [ürün, yerli markalar]
+cover: /blog/yerlimi-net-v2-yayinda/yerlimi-net.jpg
 ---
 
 Günümüzde dünyanın iyice küreselleştiği öte yandan savaşların da kızıştığı bir dönemde sessiz ama çok etkili bir savaş cephesi daha var; ekonomik savaş. Yine bu savaşa ek olarak 5. kol faaliyeti olarak isimlendirilen algı savaşları var. Savaş çeşitlerinde en tehlikelisi de bu algı savaşı. Düşman sıcak savaştan çok daha az maliyetle bu algı savaşını medya, haber, film, dizi, reklam, örgütler ve daha pek çok yöntemle yürütüyor ve üstüne eğer belirli bir aşamayı geçerse buradan kazanç bile sağlar hale geliyor.

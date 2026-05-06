@@ -3,6 +3,7 @@ title: 3D Ping Pong v3
 date: 2026-05-01
 summary: 2005'te Flash ile yaptığım 3D Ping Pong oyununu 20 yıl sonra Canvas üzerine yeniden yazdım. Bu yazı, oyunu oynanır kılan değil canlı hissettiren küçük detaylar üzerine.
 tags: [lab, oyun, tasarım]
+cover: /blog/3d-ping-pong-v3/game.jpg
 ---
 
 2005 yılında 3D Ping Pong oyununu Flash ile, en temel 3D engine mantığında vektörel çizimlerle hazırlamıştım. O yıllarda çok ilgi gördü ve görsellerini geliştirerek kısa sürede v2 sürümünü yayına aldım. Skor tablosu da vardı; epeyce kişi oynayıp eğlenmişti.
