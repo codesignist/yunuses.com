@@ -535,8 +535,8 @@ export default function Flow() {
         </div>
       )}
       {hintVisible && !unsupported && (
-        <div className="pointer-events-none absolute bottom-20 left-1/2 -translate-x-1/2 text-white/55 text-[13px] tracking-wide animate-fade-in-up">
-          Sürükle, mürekkebi yay
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/60 text-[16px] max-md:text-[14px] tracking-wide animate-fade-in-up">
+          Sürükleyerek başla
         </div>
       )}
       {!unsupported && (

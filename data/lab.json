@@ -3,7 +3,7 @@
     "slug": "flow",
     "title": "Flow",
     "tag": "Görsel",
-    "description": "Ekrana renk damlat, suda yayılışını izle. WebGL2 üzerine yazılmış minimal bir akışkan simülasyonu — pressure projection yok, sadece advection ve dissipation."
+    "description": "WebGL2 üzerine yazılmış minimal bir akışkan simülasyonu. Tayf, Lav, Buz ve Kaos olmak üzere dört farklı renk modu var. Mouse veya dokunmatikle çalışır."
   },
   {
     "slug": "3d-ping-pong",
