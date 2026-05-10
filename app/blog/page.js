@@ -52,7 +52,7 @@ export default function BlogIndex() {
                         alt=""
                         fill
                         sizes="(max-width: 768px) 80px, 96px"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        className="object-cover"
                       />
                     ) : (
                       <span
@@ -64,14 +64,14 @@ export default function BlogIndex() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-3 text-[13px] text-faint">
+                    <h2 className="font-blog-serif text-2xl font-semibold tracking-tight text-fg leading-snug group-hover:text-fg/90 transition-colors max-md:text-xl">
+                      {post.title}
+                    </h2>
+                    <div className="mt-1 flex items-baseline gap-3 text-[13px] text-faint">
                       <time dateTime={post.date}>{formatDate(post.date)}</time>
                       <span className="text-line">·</span>
                       <span>{post.readingTime} dk okuma</span>
                     </div>
-                    <h2 className="font-blog-serif mt-2 text-2xl font-semibold tracking-tight text-fg leading-snug group-hover:text-fg/90 transition-colors max-md:text-xl">
-                      {post.title}
-                    </h2>
                     {post.summary && (
                       <p className="font-blog-serif mt-3 text-[15px] leading-[1.7] text-muted">
                         {post.summary}
