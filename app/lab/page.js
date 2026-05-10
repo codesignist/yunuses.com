@@ -1,4 +1,5 @@
 import Link from "next/link";
+import experiments from "data/lab.json";
 
 export const metadata = {
   title: "Lab — Yunus Eş",
@@ -10,16 +11,6 @@ export const metadata = {
       "Eski ve yeni deneysel çalışmalar. Flash döneminden bugüne kalan minik prototipler, oyunlar ve görsel denemeler.",
   },
 };
-
-const experiments = [
-  {
-    slug: "3d-ping-pong",
-    title: "3D Ping Pong",
-    summary:
-      "Flash zamanlarımdan kalma minik bir 3D ping pong oyununun yeniden yorumu. Engine yok; saf Canvas 2D üzerine yazılmış elden bir perspektif projeksiyonu.",
-    tag: "Oyun",
-  },
-];
 
 export default function LabIndex() {
   return (
@@ -57,7 +48,7 @@ export default function LabIndex() {
                   {item.title}
                 </h2>
                 <p className="mt-3 text-[15px] leading-[1.7] text-muted">
-                  {item.summary}
+                  {item.description}
                 </p>
               </Link>
             </li>

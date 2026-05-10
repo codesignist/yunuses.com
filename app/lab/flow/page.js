@@ -1,8 +1,8 @@
 import Link from "next/link";
 import experiments from "data/lab.json";
-import PingPong from "./PingPong";
+import Flow from "./Flow";
 
-const experiment = experiments.find((e) => e.slug === "3d-ping-pong");
+const experiment = experiments.find((e) => e.slug === "flow");
 const pageTitle = `${experiment.title} — Yunus Eş`;
 
 export const metadata = {
@@ -14,7 +14,7 @@ export const metadata = {
   },
 };
 
-export default function PingPongPage() {
+export default function FlowPage() {
   return (
     <main id="main" className="fixed inset-0 bg-black">
       <Link
@@ -38,7 +38,7 @@ export default function PingPongPage() {
         <span>Lab</span>
       </Link>
 
-      <PingPong />
+      <Flow />
     </main>
   );
 }

@@ -1,0 +1,14 @@
+[
+  {
+    "slug": "flow",
+    "title": "Flow",
+    "tag": "Görsel",
+    "description": "Ekrana renk damlat, suda yayılışını izle. WebGL2 üzerine yazılmış minimal bir akışkan simülasyonu — pressure projection yok, sadece advection ve dissipation."
+  },
+  {
+    "slug": "3d-ping-pong",
+    "title": "3D Ping Pong",
+    "tag": "Oyun",
+    "description": "Flash döneminden kalma 3D ping pong oyununun saf Canvas 2D üzerine yazılmış yeniden yorumu. Engine yok, perspektif projeksiyonu elden hesaplanmış. Mouse ile oynanır."
+  }
+]
