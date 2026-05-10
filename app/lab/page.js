@@ -1,15 +1,13 @@
 import Link from "next/link";
 import experiments from "data/lab.json";
 
+const description =
+  "Eski ve yeni deneysel çalışmalar. Flash döneminden bugüne kalan minik prototipler, oyunlar ve görsel denemeler.";
+
 export const metadata = {
-  title: "Lab — Yunus Eş",
-  description:
-    "Eski ve yeni deneysel çalışmalar. Flash döneminden bugüne kalan minik prototipler, oyunlar ve görsel denemeler.",
-  openGraph: {
-    title: "Lab — Yunus Eş",
-    description:
-      "Eski ve yeni deneysel çalışmalar. Flash döneminden bugüne kalan minik prototipler, oyunlar ve görsel denemeler.",
-  },
+  title: "Lab",
+  description,
+  openGraph: { title: "Lab", description },
 };
 
 export default function LabIndex() {

@@ -3,13 +3,12 @@ import experiments from "data/lab.json";
 import PingPong from "./PingPong";
 
 const experiment = experiments.find((e) => e.slug === "3d-ping-pong");
-const pageTitle = `${experiment.title} — Yunus Eş`;
 
 export const metadata = {
-  title: pageTitle,
+  title: experiment.title,
   description: experiment.description,
   openGraph: {
-    title: pageTitle,
+    title: experiment.title,
     description: experiment.description,
   },
 };

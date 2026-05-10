@@ -4,15 +4,13 @@ import LessonsMap from "components/organisms/LessonsMap";
 import lessons from "data/lessons.json";
 import types from "data/types.json";
 
+const description =
+  "Sıfırdan FrontEnd Developer'lığa: 1 Ağustos 2022'de başlayıp tamamlanan ücretsiz uygulamalı eğitim programı.";
+
 export const metadata = {
-  title: "Zero to Hero — Yunus Eş",
-  description:
-    "Sıfırdan FrontEnd Developer'lığa: 1 Ağustos 2022'de başlayıp tamamlanan ücretsiz uygulamalı eğitim programı.",
-  openGraph: {
-    title: "Zero to Hero — Yunus Eş",
-    description:
-      "Sıfırdan FrontEnd Developer'lığa: 1 Ağustos 2022'de başlayıp tamamlanan ücretsiz uygulamalı eğitim programı.",
-  },
+  title: "Zero to Hero",
+  description,
+  openGraph: { title: "Zero to Hero", description },
 };
 
 const H2 = ({ children }) => (

@@ -2,13 +2,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatDate, getAllPosts } from "lib/posts";
 
+const description = "Yazılım, ürün ve süreç üzerine notlar.";
+
 export const metadata = {
-  title: "Blog — Yunus Eş",
-  description: "Yazılım, ürün ve süreç üzerine notlar.",
-  openGraph: {
-    title: "Blog — Yunus Eş",
-    description: "Yazılım, ürün ve süreç üzerine notlar.",
-  },
+  title: "Blog",
+  description,
+  openGraph: { title: "Blog", description },
 };
 
 export default function BlogIndex() {

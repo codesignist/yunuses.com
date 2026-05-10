@@ -24,22 +24,29 @@ const title = "Yunus Eş";
 const description =
   "Yazılımcı, CodeCube kurucusu. Dijital ürünler tasarlıyor ve hayata geçiriyor.";
 
+// Alt sayfalar `title: "Foo"` yazınca otomatik "Foo — Yunus Eş" olur.
+// Default ise root sayfası için doğrudan "Yunus Eş".
+const titleConfig = {
+  default: title,
+  template: `%s — ${title}`,
+};
+
 export const metadata = {
   metadataBase: new URL("https://yunuses.com"),
-  title: "Yunus Eş",
+  title: titleConfig,
   description,
   manifest: "/site.webmanifest",
   openGraph: {
     type: "website",
     siteName: title,
-    title,
+    title: titleConfig,
     description,
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
     site: "@codesignist",
-    title,
+    title: titleConfig,
     description,
   },
   other: {
