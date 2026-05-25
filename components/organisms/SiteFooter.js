@@ -46,6 +46,14 @@ export default function SiteFooter() {
             <Link href="/lab" className="hover:text-fg transition-colors">
               Lab
             </Link>
+            <a
+              href="/feed.xml"
+              target="_blank"
+              rel="noopener"
+              className="hover:text-fg transition-colors"
+            >
+              RSS
+            </a>
           </div>
           {isBlogPost && <SharePost />}
         </div>

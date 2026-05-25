@@ -54,4 +54,11 @@ module.exports = {
       },
     ];
   },
+  async redirects() {
+    return [
+      { source: "/rss", destination: "/feed.xml", permanent: true },
+      { source: "/feed", destination: "/feed.xml", permanent: true },
+      { source: "/atom.xml", destination: "/feed.xml", permanent: true },
+    ];
+  },
 };
