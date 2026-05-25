@@ -51,7 +51,7 @@ export default async function PostPage({ params }) {
     headline: post.title,
     description: post.summary,
     datePublished: post.date,
-    dateModified: post.date,
+    dateModified: post.updated || post.date,
     url,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     author: PERSON,
