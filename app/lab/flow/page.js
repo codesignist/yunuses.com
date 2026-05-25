@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { experimentMetadata } from "../experimentMetadata";
+import ExperimentSchemas from "../ExperimentSchemas";
 import Flow from "./Flow";
 
 export const metadata = experimentMetadata("flow");
@@ -7,6 +8,7 @@ export const metadata = experimentMetadata("flow");
 export default function FlowPage() {
   return (
     <main id="main" className="fixed inset-0 bg-black">
+      <ExperimentSchemas slug="flow" />
       <Link
         href="/lab"
         aria-label="Lab'a dön"

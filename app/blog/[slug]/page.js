@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
 import { PERSON, SITE_URL } from "lib/identity";
-import { jsonLd } from "lib/jsonLd";
+import { jsonLd, breadcrumbList } from "lib/jsonLd";
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
@@ -36,6 +36,11 @@ export default async function PostPage({ params }) {
   if (!post || post.draft) notFound();
 
   const url = `${SITE_URL}/blog/${post.slug}/`;
+  const breadcrumbSchema = breadcrumbList([
+    { name: "Anasayfa", url: `${SITE_URL}/` },
+    { name: "Blog", url: `${SITE_URL}/blog/` },
+    { name: post.title, url },
+  ]);
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -62,6 +67,10 @@ export default async function PostPage({ params }) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(articleSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }}
       />
       <article className="w-full max-w-[680px] mx-auto">
         <header className="mb-12 animate-fade-in-up">

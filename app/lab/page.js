@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import experiments from "data/lab.json";
+import { SITE_URL } from "lib/identity";
+import { jsonLd } from "lib/jsonLd";
 
 const description =
   "Eski ve yeni deneysel çalışmalar. Flash döneminden bugüne kalan minik prototipler, oyunlar ve görsel denemeler.";
@@ -11,9 +13,29 @@ export const metadata = {
   openGraph: { title: "Lab", description },
 };
 
+const labListSchema = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Lab",
+  description,
+  url: `${SITE_URL}/lab/`,
+  inLanguage: "tr-TR",
+  numberOfItems: experiments.length,
+  itemListElement: experiments.map((exp, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    url: `${SITE_URL}/lab/${exp.slug}/`,
+    name: exp.title,
+  })),
+};
+
 export default function LabIndex() {
   return (
     <main id="main" className="flex-1 px-6 py-20 max-md:py-12 max-md:px-5">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(labListSchema) }}
+      />
       <div className="w-full max-w-[680px] mx-auto">
         <header className="mb-16 max-md:mb-12 animate-fade-in-up">
           <Link
