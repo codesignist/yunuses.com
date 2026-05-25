@@ -2,8 +2,7 @@ import ReadingProgress from "components/atoms/ReadingProgress";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
-
-const SITE_URL = "https://yunuses.com";
+import { PERSON, SITE_URL } from "lib/identity";
 
 function jsonLd(schema) {
   return JSON.stringify(schema).replace(/</g, "\\u003c");
@@ -43,15 +42,21 @@ export default async function PostPage({ params }) {
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
+    inLanguage: "tr-TR",
     headline: post.title,
     description: post.summary,
     datePublished: post.date,
     dateModified: post.date,
     url,
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    author: { "@type": "Person", name: "Yunus Eş", url: SITE_URL },
-    publisher: { "@type": "Person", name: "Yunus Eş", url: SITE_URL },
-    image: `${SITE_URL}/blog/${post.slug}/opengraph-image`,
+    author: PERSON,
+    publisher: PERSON,
+    image: {
+      "@type": "ImageObject",
+      url: `${SITE_URL}/blog/${post.slug}/opengraph-image`,
+      width: 1200,
+      height: 630,
+    },
   };
 
   return (

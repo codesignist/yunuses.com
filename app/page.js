@@ -1,31 +1,12 @@
 import AvatarLink from "components/atoms/AvatarLink";
 import SocialAnchor from "components/atoms/SocialAnchor";
 import { formatDate, getAllPosts } from "lib/posts";
+import { PERSON } from "lib/identity";
 import Link from "next/link";
-
-const SITE_URL = "https://yunuses.com";
 
 const personSchema = {
   "@context": "https://schema.org",
-  "@type": "Person",
-  name: "Yunus Eş",
-  alternateName: "codesignist",
-  url: SITE_URL,
-  image: `${SITE_URL}/avatar.webp`,
-  jobTitle: "Kurucu",
-  worksFor: {
-    "@type": "Organization",
-    name: "CodeCube Software",
-    url: "https://codecube.com.tr",
-  },
-  sameAs: [
-    "https://nsosyal.com/codesignist",
-    "https://www.youtube.com/yunuses",
-    "https://github.com/codesignist",
-    "https://www.linkedin.com/in/codesignist/",
-    "https://x.com/codesignist",
-    "https://www.instagram.com/codesignist",
-  ],
+  ...PERSON,
 };
 
 function jsonLd(schema) {
