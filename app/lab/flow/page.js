@@ -1,17 +1,8 @@
 import Link from "next/link";
-import experiments from "data/lab.json";
+import { experimentMetadata } from "../experimentMetadata";
 import Flow from "./Flow";
 
-const experiment = experiments.find((e) => e.slug === "flow");
-
-export const metadata = {
-  title: experiment.title,
-  description: experiment.description,
-  openGraph: {
-    title: experiment.title,
-    description: experiment.description,
-  },
-};
+export const metadata = experimentMetadata("flow");
 
 export default function FlowPage() {
   return (

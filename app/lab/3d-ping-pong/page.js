@@ -1,17 +1,8 @@
 import Link from "next/link";
-import experiments from "data/lab.json";
+import { experimentMetadata } from "../experimentMetadata";
 import PingPong from "./PingPong";
 
-const experiment = experiments.find((e) => e.slug === "3d-ping-pong");
-
-export const metadata = {
-  title: experiment.title,
-  description: experiment.description,
-  openGraph: {
-    title: experiment.title,
-    description: experiment.description,
-  },
-};
+export const metadata = experimentMetadata("3d-ping-pong");
 
 export default function PingPongPage() {
   return (

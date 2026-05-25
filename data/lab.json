@@ -3,18 +3,21 @@
     "slug": "attractors",
     "title": "Attractors",
     "tag": "Görsel",
+    "date": "2026-05-25",
     "description": "Lorenz, Aizawa, Halvorsen ve Thomas garip çekicilerinin 3D yörüngeleri. Tek bir başlangıç noktası ve bir diferansiyel denklem 200 bin adımda kelebek, çiçek ya da yumak şeklinde yapılar çıkarıyor. Three.js yok, projeksiyon ve kontroller saf Canvas 2D üzerine elden yazılmış. Mouse veya dokunmatik ile döndürülür, tekerlekle yakınlaştırılır."
   },
   {
     "slug": "flow",
     "title": "Flow",
     "tag": "Görsel",
+    "date": "2026-05-10",
     "description": "WebGL2 üzerine yazılmış minimal bir akışkan simülasyonu. Tayf, Lav, Buz ve Kaos olmak üzere dört farklı renk modu var. Mouse veya dokunmatikle çalışır."
   },
   {
     "slug": "3d-ping-pong",
     "title": "3D Ping Pong",
     "tag": "Oyun",
+    "date": "2026-05-01",
     "description": "Flash döneminden kalma 3D ping pong oyununun saf Canvas 2D üzerine yazılmış yeniden yorumu. Engine yok, perspektif projeksiyonu elden hesaplanmış. Mouse ile oynanır."
   }
 ]

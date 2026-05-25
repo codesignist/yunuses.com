@@ -1,17 +1,8 @@
 import Link from "next/link";
-import experiments from "data/lab.json";
+import { experimentMetadata } from "../experimentMetadata";
 import Attractors from "./Attractors";
 
-const experiment = experiments.find((e) => e.slug === "attractors");
-
-export const metadata = {
-  title: experiment.title,
-  description: experiment.description,
-  openGraph: {
-    title: experiment.title,
-    description: experiment.description,
-  },
-};
+export const metadata = experimentMetadata("attractors");
 
 export default function AttractorsPage() {
   return (

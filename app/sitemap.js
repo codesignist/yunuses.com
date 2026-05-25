@@ -1,4 +1,5 @@
 import { getAllPosts } from "lib/posts";
+import experiments from "data/lab.json";
 
 const SITE_URL = "https://yunuses.com";
 
@@ -30,13 +31,14 @@ export default function sitemap() {
       changeFrequency: "monthly",
       priority: 0.6,
     },
-    {
-      url: `${SITE_URL}/lab/3d-ping-pong/`,
-      lastModified: new Date("2026-04-30"),
-      changeFrequency: "yearly",
-      priority: 0.5,
-    },
   ];
+
+  const labRoutes = experiments.map((exp) => ({
+    url: `${SITE_URL}/lab/${exp.slug}/`,
+    lastModified: exp.date ? new Date(exp.date) : new Date(),
+    changeFrequency: "yearly",
+    priority: 0.5,
+  }));
 
   const postRoutes = posts.map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}/`,
@@ -45,5 +47,5 @@ export default function sitemap() {
     priority: 0.6,
   }));
 
-  return [...staticRoutes, ...postRoutes];
+  return [...staticRoutes, ...labRoutes, ...postRoutes];
 }
