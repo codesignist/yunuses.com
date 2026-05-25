@@ -13,6 +13,9 @@ export const metadata = {
   title: "Zero to Hero",
   description,
   openGraph: { title: "Zero to Hero", description },
+  alternates: {
+    canonical: "/zero-to-hero/",
+  },
 };
 
 const H2 = ({ children }) => (

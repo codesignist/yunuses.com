@@ -14,6 +14,9 @@ export function experimentMetadata(slug) {
       title,
       description,
     },
+    alternates: {
+      canonical: `/lab/${slug}/`,
+    },
   };
 }
 

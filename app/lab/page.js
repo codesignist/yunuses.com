@@ -11,6 +11,9 @@ export const metadata = {
   title: "Lab",
   description,
   openGraph: { title: "Lab", description },
+  alternates: {
+    canonical: "/lab/",
+  },
 };
 
 const labListSchema = {

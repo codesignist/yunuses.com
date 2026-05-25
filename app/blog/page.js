@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate, getAllPosts } from "lib/posts";
+import { FEED_TYPES } from "lib/metadata";
 
 const description = "Yazılım, ürün ve süreç üzerine notlar.";
 
@@ -8,6 +9,10 @@ export const metadata = {
   title: "Blog",
   description,
   openGraph: { title: "Blog", description },
+  alternates: {
+    canonical: "/blog/",
+    types: FEED_TYPES,
+  },
 };
 
 export default function BlogIndex() {

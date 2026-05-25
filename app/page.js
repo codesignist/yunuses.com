@@ -3,7 +3,15 @@ import SocialAnchor from "components/atoms/SocialAnchor";
 import { formatDate, getAllPosts } from "lib/posts";
 import { PERSON } from "lib/identity";
 import { jsonLd } from "lib/jsonLd";
+import { FEED_TYPES } from "lib/metadata";
 import Link from "next/link";
+
+export const metadata = {
+  alternates: {
+    canonical: "/",
+    types: FEED_TYPES,
+  },
+};
 
 const personSchema = {
   "@context": "https://schema.org",
