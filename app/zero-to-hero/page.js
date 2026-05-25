@@ -1,6 +1,6 @@
 import Icon from "components/atoms/Icon";
 import LinkButton from "components/atoms/LinkButton";
-import LessonsMap from "components/organisms/LessonsMap";
+import LessonsMap from "./LessonsMap";
 import lessons from "data/lessons.json";
 import types from "data/types.json";
 
