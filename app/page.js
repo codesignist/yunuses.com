@@ -2,16 +2,13 @@ import AvatarLink from "components/atoms/AvatarLink";
 import SocialAnchor from "components/atoms/SocialAnchor";
 import { formatDate, getAllPosts } from "lib/posts";
 import { PERSON } from "lib/identity";
+import { jsonLd } from "lib/jsonLd";
 import Link from "next/link";
 
 const personSchema = {
   "@context": "https://schema.org",
   ...PERSON,
 };
-
-function jsonLd(schema) {
-  return JSON.stringify(schema).replace(/</g, "\\u003c");
-}
 
 export default function Home() {
   const latestPost = getAllPosts()[0];

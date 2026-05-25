@@ -3,10 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
 import { PERSON, SITE_URL } from "lib/identity";
-
-function jsonLd(schema) {
-  return JSON.stringify(schema).replace(/</g, "\\u003c");
-}
+import { jsonLd } from "lib/jsonLd";
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));

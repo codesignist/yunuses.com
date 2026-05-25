@@ -3,6 +3,8 @@ import LinkButton from "components/atoms/LinkButton";
 import LessonsMap from "./LessonsMap";
 import lessons from "data/lessons.json";
 import types from "data/types.json";
+import { PERSON, SITE_URL } from "lib/identity";
+import { jsonLd } from "lib/jsonLd";
 
 const description =
   "Sıfırdan FrontEnd Developer'lığa: 1 Ağustos 2022'de başlayıp tamamlanan ücretsiz uygulamalı eğitim programı.";
@@ -43,6 +45,28 @@ const technologies = [
   "Ant Design",
 ];
 
+const courseSchema = {
+  "@context": "https://schema.org",
+  "@type": "Course",
+  name: "Zero to Hero: FrontEnd Developer",
+  description,
+  url: `${SITE_URL}/zero-to-hero/`,
+  inLanguage: "tr-TR",
+  isAccessibleForFree: true,
+  educationalLevel: "Beginner",
+  provider: PERSON,
+  teaches: technologies.map((t) => t.replace(/\s*\(.*?\)\s*/g, "").trim()),
+  hasCourseInstance: {
+    "@type": "CourseInstance",
+    courseMode: "Online",
+    startDate: "2022-08-01",
+    location: {
+      "@type": "VirtualLocation",
+      url: "https://www.youtube.com/yunuses",
+    },
+  },
+};
+
 const achievements = [
   "Temel yazılım bilgisi",
   "Kendi kendine öğrenme becerisi",
@@ -75,6 +99,10 @@ const faq = [
 export default function ZeroToHero() {
   return (
     <main id="main" className="flex-1 px-6 py-16 max-md:py-12 max-md:px-5 animate-fade-in">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(courseSchema) }}
+      />
       <div className="mx-auto max-w-[680px]">
         <LinkButton icon="chevron-left" href="/">
           Ana sayfa
