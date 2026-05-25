@@ -1442,7 +1442,7 @@ export default function PingPong() {
   })();
 
   const onShareX = () => {
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    const url = `https://x.com/intent/tweet?text=${encodeURIComponent(
       shareText
     )}&url=${encodeURIComponent(SHARE_URL)}`;
     window.open(url, "_blank", "noopener,noreferrer");

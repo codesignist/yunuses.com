@@ -103,7 +103,7 @@ yunuses.com
 - [GitHub](https://github.com/codesignist)
 - [LinkedIn](https://www.linkedin.com/in/codesignist)
 - [YouTube](https://www.youtube.com/yunuses)
-- [X / Twitter](https://twitter.com/codesignist)
+- [X](https://x.com/codesignist)
 - [Instagram](https://www.instagram.com/codesignist)
 - [NSosyal](https://nsosyal.com/codesignist)
 

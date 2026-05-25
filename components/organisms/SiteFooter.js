@@ -10,7 +10,7 @@ const SOCIAL_DATA = {
   youtube: "https://www.youtube.com/yunuses",
   github: "https://github.com/codesignist",
   linkedin: "https://www.linkedin.com/in/codesignist/",
-  twitter: "https://twitter.com/codesignist",
+  x: "https://x.com/codesignist",
   instagram: "https://www.instagram.com/codesignist",
 };
 

@@ -23,7 +23,7 @@ const personSchema = {
     "https://www.youtube.com/yunuses",
     "https://github.com/codesignist",
     "https://www.linkedin.com/in/codesignist/",
-    "https://twitter.com/codesignist",
+    "https://x.com/codesignist",
     "https://www.instagram.com/codesignist",
   ],
 };
