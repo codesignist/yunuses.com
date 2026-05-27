@@ -46,6 +46,7 @@ const securityHeaders = [
 module.exports = {
   reactStrictMode: true,
   trailingSlash: true,
+  devIndicators: false,
   async headers() {
     return [
       {
