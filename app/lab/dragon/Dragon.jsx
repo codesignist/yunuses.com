@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 
 const HEAD_PROFILES = [
   [-14, 10],
@@ -18,12 +19,16 @@ const N_HEAD_RINGS = HEAD_PROFILES.length;
 const N_HEAD_FACETS = 16;
 
 const N_SEGS = 48;
-const SEG_LEN = 26;
-const SEG_GAP = 8;
+const SEG_LEN = 16;
+const SEG_GAP = 5;
 const CHAIN_DIST = SEG_LEN + SEG_GAP;
 const N_FACETS = 16;
 const IDLE_DELAY = 1500;
 const Z_AMP = 200;
+
+const MAX_BEND_RAD = (25 * Math.PI) / 180;
+const MAX_BEND_COS = Math.cos(MAX_BEND_RAD);
+const MAX_BEND_SIN = Math.sin(MAX_BEND_RAD);
 
 const BODY_R = 20;
 const TAPER_START = 0.7;
@@ -47,7 +52,8 @@ const STYLES = {
     bg: ["#181f2c", "#080c14"],
     mane: [0x010204, 0x05070b, 0x0c0e12],
     limb: 0x080a0e,
-    eye: { color: 0xfff0a0, emissive: 0xb09020, intensity: 0.5 },
+    eye: { color: 0xeaf4ff, emissive: 0xa8c8f0, intensity: 1.2, halo: 0.22 },
+    pbr: "shadow",
   },
   altin: {
     label: "Altın",
@@ -60,29 +66,34 @@ const STYLES = {
     ambientIntensity: 0.4,
     bg: ["#1a1408", "#0a0602"],
     mane: [0x3a2000, 0xb87614, 0xffd870],
+    maneCounts: [210, 190, 160],
     limb: 0x2a1800,
-    eye: { color: 0xfff4c0, emissive: 0xffa820, intensity: 0.7 },
+    eye: { color: 0xfff4c0, emissive: 0xffc040, intensity: 1.4, halo: 0.26 },
+    pbr: "gold",
+    maneFlame: true,
   },
-  haku: {
-    label: "Haku",
-    body: 0xbfe6e0,
-    emissive: 0x1a3848,
-    emissiveIntensity: 0.08,
-    light: 0xdcf0f0,
-    lightIntensity: 1.1,
-    ambient: 0x182830,
-    ambientIntensity: 0.4,
-    bg: ["#0e1a1f", "#040a0c"],
-    mane: [0x123040, 0x4eaeae, 0xb6eae4],
-    limb: 0x1a242e,
-    eye: { color: 0xb0e0e8, emissive: 0x3090a8, intensity: 0.55 },
+  cam: {
+    label: "Cam",
+    body: 0xb8d8e4,
+    emissive: 0x0a1a26,
+    emissiveIntensity: 0,
+    light: 0xeaf6ff,
+    lightIntensity: 1.35,
+    ambient: 0x1a2a3a,
+    ambientIntensity: 0.55,
+    bg: ["#0c1a26", "#03080e"],
+    mane: [0x1a3848, 0x6a98a8, 0xc0e0e8],
+    maneCounts: [210, 190, 160],
+    limb: 0x4a78a0,
+    eye: { color: 0xe0f4f8, emissive: 0x60b8d8, intensity: 1.3, halo: 0.24 },
+    pbr: "glass",
   },
 };
 
 const MANE_LAYERS = [
-  { count: 210, lenMult: 0.95, baseOff: -0.05, lateralAmp: 0.55, lift: 0.4, alpha: 0.7, seed: 1, colorIdx: 0 },
-  { count: 190, lenMult: 1.05, baseOff: 0.05, lateralAmp: 0.4, lift: 0.55, alpha: 0.7, seed: 1000, colorIdx: 1 },
-  { count: 160, lenMult: 1.15, baseOff: 0.1, lateralAmp: 0.25, lift: 0.7, alpha: 0.75, seed: 2000, colorIdx: 2 },
+  { count: 460, lenMult: 0.95, baseOff: -0.05, lateralAmp: 0.55, lift: 0.4, alpha: 0.7, seed: 1, colorIdx: 0 },
+  { count: 420, lenMult: 1.05, baseOff: 0.05, lateralAmp: 0.4, lift: 0.55, alpha: 0.7, seed: 1000, colorIdx: 1 },
+  { count: 350, lenMult: 1.15, baseOff: 0.1, lateralAmp: 0.25, lift: 0.7, alpha: 0.75, seed: 2000, colorIdx: 2 },
 ];
 
 function hash(n) {
@@ -168,10 +179,160 @@ const FIRE_BODY_FS = `
   }
 `;
 
-const N_LEG_RINGS = 11;
+const MANE_FIRE_VS = `
+  attribute float aTip;
+  varying float vTip;
+  varying vec3 vWorldPos;
+  void main() {
+    vTip = aTip;
+    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+    vWorldPos = worldPos.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPos;
+  }
+`;
+
+const MANE_FIRE_FS = `
+  precision highp float;
+  uniform float uTime;
+  uniform vec3 uColorBase;
+  uniform vec3 uColorMid;
+  uniform vec3 uColorTip;
+  uniform float uIntensity;
+  varying float vTip;
+  varying vec3 vWorldPos;
+
+  float hash3(vec3 p) {
+    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+  }
+
+  float vnoise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float n000 = hash3(i);
+    float n100 = hash3(i + vec3(1.0, 0.0, 0.0));
+    float n010 = hash3(i + vec3(0.0, 1.0, 0.0));
+    float n110 = hash3(i + vec3(1.0, 1.0, 0.0));
+    float n001 = hash3(i + vec3(0.0, 0.0, 1.0));
+    float n101 = hash3(i + vec3(1.0, 0.0, 1.0));
+    float n011 = hash3(i + vec3(0.0, 1.0, 1.0));
+    float n111 = hash3(i + vec3(1.0, 1.0, 1.0));
+    return mix(
+      mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
+      mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
+      f.z
+    );
+  }
+
+  float fbm(vec3 p) {
+    float v = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 3; i++) {
+      v += vnoise(p) * a;
+      p *= 2.05;
+      a *= 0.5;
+    }
+    return v;
+  }
+
+  void main() {
+    vec3 np = vWorldPos * 0.09 + vec3(uTime * 0.6, -uTime * 1.8, uTime * 0.4);
+    float n = fbm(np);
+    float heat = vTip + (n - 0.5) * 0.45;
+    heat = clamp(heat, 0.0, 1.0);
+
+    vec3 col = mix(uColorBase, uColorMid, smoothstep(0.0, 0.55, heat));
+    col = mix(col, uColorTip, smoothstep(0.55, 1.0, heat));
+    col += uColorTip * pow(heat, 5.0) * 0.7;
+
+    gl_FragColor = vec4(col * uIntensity, 1.0);
+  }
+`;
+
+const FUR_SHELLS = 14;
+const FUR_OFFSET = 6.0;
+
+const FUR_VS = `
+  uniform float uShellIdx;
+  uniform float uShellOffset;
+  uniform vec3 uGravity;
+  varying vec2 vUv;
+  varying float vShell;
+  varying vec3 vNormal;
+  varying vec3 vViewDir;
+  void main() {
+    float k = uShellIdx;
+    vec3 push = normal * (k * uShellOffset);
+    push += uGravity * (k * k * 1.8);
+    vec3 offsetPos = position + push;
+    vec4 worldPos = modelMatrix * vec4(offsetPos, 1.0);
+    vUv = uv;
+    vShell = k;
+    vNormal = normalize(mat3(modelMatrix) * normal);
+    vViewDir = normalize(cameraPosition - worldPos.xyz);
+    gl_Position = projectionMatrix * viewMatrix * worldPos;
+  }
+`;
+
+const FUR_FS = `
+  precision highp float;
+  uniform vec3 uColorBase;
+  uniform vec3 uColorTip;
+  uniform vec2 uDensity;
+  uniform float uLengthVar;
+  uniform float uThinness;
+  uniform vec2 uURange;
+  uniform float uVCenter;
+  uniform float uVHalfWidth;
+  uniform float uMaskSoft;
+  varying vec2 vUv;
+  varying float vShell;
+  varying vec3 vNormal;
+  varying vec3 vViewDir;
+
+  float hash2(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+  }
+
+  void main() {
+    float uMask = smoothstep(uURange.x, uURange.x + uMaskSoft, vUv.x)
+                * (1.0 - smoothstep(uURange.y - uMaskSoft, uURange.y, vUv.x));
+    float vDist = abs(vUv.y - uVCenter);
+    vDist = min(vDist, 1.0 - vDist);
+    float vMask = 1.0 - smoothstep(uVHalfWidth - uMaskSoft, uVHalfWidth, vDist);
+    float mask = uMask * vMask;
+
+    vec2 cellCoord = vUv * uDensity;
+    vec2 cell = floor(cellCoord);
+    vec2 cellFrac = fract(cellCoord) - 0.5;
+
+    float strandH = mix(1.0 - uLengthVar, 1.0, hash2(cell)) * mask;
+    if (vShell > strandH) discard;
+
+    float radius = uThinness * (1.0 - vShell * 0.55);
+    if (dot(cellFrac, cellFrac) > radius * radius) discard;
+
+    vec3 col = mix(uColorBase, uColorTip, vShell);
+    col *= 0.45 + 0.55 * vShell;
+
+    vec3 nrm = normalize(vNormal);
+    vec3 ldir = normalize(vec3(0.45, 0.85, 0.55));
+    float ndl = max(0.28, dot(nrm, ldir));
+    col *= ndl;
+
+    vec3 v = normalize(vViewDir);
+    float rim = pow(1.0 - max(0.0, dot(nrm, v)), 2.2);
+    col += uColorTip * rim * vShell * 0.45;
+
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+
+const N_LEG_RINGS = 13;
 const N_LEG_FACETS = 8;
-const N_CLAW_RINGS = 5;
+const N_CLAW_RINGS = 6;
 const N_CLAW_FACETS = 5;
+const N_FINGERS = 4;
 
 const LEG_DEFS = [
   { segIdx: 6, side: -1, phase: 0 },
@@ -332,11 +493,49 @@ function updateTubeRings(geom, pts, radii, nRings, nFacets, cosTab, sinTab, refU
 
 export default function Dragon() {
   const containerRef = useRef(null);
+  const branchRef = useRef(null);
   const [active, setActive] = useState("golge");
   const activeRef = useRef("golge");
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
+
+  useEffect(() => {
+    let raf = 0;
+    let tx = 0, ty = 0;
+    let curX = 0, curY = 0;
+    const MAX = 9;
+
+    function onMove(e) {
+      const w = window.innerWidth || 1;
+      const h = window.innerHeight || 1;
+      const nx = (e.clientX / w) * 2 - 1;
+      const ny = (e.clientY / h) * 2 - 1;
+      tx = -nx * MAX;
+      ty = -ny * MAX;
+    }
+    function onTouch(e) {
+      if (!e.touches || !e.touches[0]) return;
+      onMove(e.touches[0]);
+    }
+    function tick() {
+      curX += (tx - curX) * 0.06;
+      curY += (ty - curY) * 0.06;
+      const el = branchRef.current;
+      if (el) {
+        el.style.transform = `scale(1.06) translate3d(${curX.toFixed(2)}px, ${curY.toFixed(2)}px, 0)`;
+      }
+      raf = requestAnimationFrame(tick);
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("touchmove", onTouch, { passive: true });
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("touchmove", onTouch);
+    };
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -370,6 +569,16 @@ export default function Dragon() {
 
     const positions = new Float32Array(N_SEGS * N_FACETS * 3);
     const normals = new Float32Array(N_SEGS * N_FACETS * 3);
+    const uvs = new Float32Array(N_SEGS * N_FACETS * 2);
+    for (let i = 0; i < N_SEGS; i++) {
+      for (let k = 0; k < N_FACETS; k++) {
+        const u = i / (N_SEGS - 1);
+        const v = k / N_FACETS;
+        const idx = (i * N_FACETS + k) * 2;
+        uvs[idx] = u;
+        uvs[idx + 1] = v;
+      }
+    }
     const indices = new Uint32Array((N_SEGS - 1) * N_FACETS * 6);
     let ii = 0;
     for (let i = 0; i < N_SEGS - 1; i++) {
@@ -390,6 +599,7 @@ export default function Dragon() {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
     geo.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+    geo.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
 
     const bodyMat = new THREE.MeshPhongMaterial({
@@ -401,6 +611,36 @@ export default function Dragon() {
     });
     const body = new THREE.Mesh(geo, bodyMat);
     scene.add(body);
+
+    const furShells = [];
+    for (let s = 0; s < FUR_SHELLS; s++) {
+      const t = (s + 1) / FUR_SHELLS;
+      const mat = new THREE.ShaderMaterial({
+        uniforms: {
+          uShellIdx: { value: t },
+          uShellOffset: { value: FUR_OFFSET },
+          uGravity: { value: new THREE.Vector3(0, -0.45, 0) },
+          uColorBase: { value: new THREE.Color(0x2a1810) },
+          uColorTip: { value: new THREE.Color(0xb88860) },
+          uDensity: { value: new THREE.Vector2(64, 24) },
+          uLengthVar: { value: 0.55 },
+          uThinness: { value: 0.44 },
+          uURange: { value: new THREE.Vector2(-1, 2) },
+          uVCenter: { value: 0.5 },
+          uVHalfWidth: { value: 0.6 },
+          uMaskSoft: { value: 0.02 },
+        },
+        vertexShader: FUR_VS,
+        fragmentShader: FUR_FS,
+        side: THREE.FrontSide,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.renderOrder = 1 + s;
+      mesh.visible = false;
+      mesh.frustumCulled = false;
+      scene.add(mesh);
+      furShells.push({ mesh, mat });
+    }
 
     const maneLayerData = MANE_LAYERS.map((layer) => {
       const params = [];
@@ -416,11 +656,27 @@ export default function Dragon() {
           tipTilt: (hash(idx + 547) - 0.5) * 1.4,
         });
       }
-      const mPos = new Float32Array(layer.count * 9);
-      const mCol = new Float32Array(layer.count * 9);
+      const mPos = new Float32Array(layer.count * 12);
+      const mCol = new Float32Array(layer.count * 12);
+      const mTip = new Float32Array(layer.count * 4);
+      const mIdx = new Uint32Array(layer.count * 12);
+      for (let i = 0; i < layer.count; i++) {
+        const v0 = i * 4;
+        const v1 = v0 + 1;
+        const v2 = v0 + 2;
+        const v3 = v0 + 3;
+        mTip[v0] = 0; mTip[v1] = 0; mTip[v2] = 0; mTip[v3] = 1;
+        const o = i * 12;
+        mIdx[o] = v0;     mIdx[o + 1] = v1;  mIdx[o + 2] = v2;
+        mIdx[o + 3] = v0; mIdx[o + 4] = v3;  mIdx[o + 5] = v1;
+        mIdx[o + 6] = v1; mIdx[o + 7] = v3;  mIdx[o + 8] = v2;
+        mIdx[o + 9] = v2; mIdx[o + 10] = v3; mIdx[o + 11] = v0;
+      }
       const mGeo = new THREE.BufferGeometry();
       mGeo.setAttribute("position", new THREE.BufferAttribute(mPos, 3));
       mGeo.setAttribute("color", new THREE.BufferAttribute(mCol, 3));
+      mGeo.setAttribute("aTip", new THREE.BufferAttribute(mTip, 1));
+      mGeo.setIndex(new THREE.BufferAttribute(mIdx, 1));
       const mMat = new THREE.MeshBasicMaterial({
         vertexColors: true,
         transparent: true,
@@ -438,8 +694,170 @@ export default function Dragon() {
       color: 0x080a0e,
       shininess: 8,
       specular: 0x0a0c10,
-      flatShading: false,
+      flatShading: true,
       side: THREE.FrontSide,
+    });
+
+    const goldBodyMat = new THREE.MeshStandardMaterial({
+      color: 0xffd070,
+      metalness: 1.0,
+      roughness: 0.22,
+      envMapIntensity: 1.4,
+    });
+    const goldHeadMat = new THREE.MeshStandardMaterial({
+      color: 0xffd070,
+      metalness: 1.0,
+      roughness: 0.26,
+      envMapIntensity: 1.3,
+    });
+    const goldLimbMat = new THREE.MeshStandardMaterial({
+      color: 0xa07820,
+      metalness: 1.0,
+      roughness: 0.4,
+      flatShading: true,
+      envMapIntensity: 1.0,
+    });
+
+    const shadowBodyMat = new THREE.MeshStandardMaterial({
+      color: 0x161c26,
+      metalness: 0.22,
+      roughness: 0.42,
+      envMapIntensity: 0.55,
+    });
+    const shadowHeadMat = new THREE.MeshStandardMaterial({
+      color: 0x161c26,
+      metalness: 0.26,
+      roughness: 0.38,
+      envMapIntensity: 0.6,
+    });
+    const shadowLimbMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0d12,
+      metalness: 0.18,
+      roughness: 0.55,
+      flatShading: true,
+      envMapIntensity: 0.4,
+    });
+
+    const glassBodyMat = new THREE.MeshPhysicalMaterial({
+      color: 0xd0e4ec,
+      metalness: 0.0,
+      roughness: 0.05,
+      transmission: 0.95,
+      thickness: 1.5,
+      ior: 1.5,
+      attenuationColor: new THREE.Color(0x4a90a8),
+      attenuationDistance: 22,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+      envMapIntensity: 1.4,
+    });
+    const glassHeadMat = new THREE.MeshPhysicalMaterial({
+      color: 0xd0e4ec,
+      metalness: 0.0,
+      roughness: 0.05,
+      transmission: 0.95,
+      thickness: 1.5,
+      ior: 1.5,
+      attenuationColor: new THREE.Color(0x4a90a8),
+      attenuationDistance: 22,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+      envMapIntensity: 1.4,
+    });
+    const glassLimbMat = new THREE.MeshPhysicalMaterial({
+      color: 0xb8d4dc,
+      metalness: 0.0,
+      roughness: 0.1,
+      transmission: 0.8,
+      thickness: 0.9,
+      ior: 1.5,
+      attenuationColor: new THREE.Color(0x3a7894),
+      attenuationDistance: 12,
+      clearcoat: 0.85,
+      clearcoatRoughness: 0.1,
+      flatShading: true,
+      envMapIntensity: 1.1,
+    });
+
+    const pbrMatSets = {
+      gold: { body: goldBodyMat, head: goldHeadMat, limb: goldLimbMat },
+      shadow: { body: shadowBodyMat, head: shadowHeadMat, limb: shadowLimbMat },
+      glass: { body: glassBodyMat, head: glassHeadMat, limb: glassLimbMat },
+    };
+
+    const scaleBumpCanvas = document.createElement("canvas");
+    scaleBumpCanvas.width = 256;
+    scaleBumpCanvas.height = 256;
+    {
+      const ctx = scaleBumpCanvas.getContext("2d");
+      ctx.fillStyle = "#808080";
+      ctx.fillRect(0, 0, 256, 256);
+      const COLS = 12;
+      const ROWS = 14;
+      const cellW = 256 / COLS;
+      const cellH = 256 / ROWS;
+      for (let r = -1; r <= ROWS + 1; r++) {
+        for (let col = -1; col <= COLS + 1; col++) {
+          const offX = (((r % 2) + 2) % 2) * cellW * 0.5;
+          const cx = col * cellW + offX + cellW * 0.5;
+          const cy = r * cellH + cellH * 0.5;
+          const grad = ctx.createRadialGradient(
+            cx,
+            cy - cellH * 0.18,
+            1,
+            cx,
+            cy,
+            cellW * 0.62,
+          );
+          grad.addColorStop(0, "#f4f4f4");
+          grad.addColorStop(0.55, "#929292");
+          grad.addColorStop(1, "#1e1e1e");
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, cellW * 0.6, cellH * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    const scaleBumpTex = new THREE.CanvasTexture(scaleBumpCanvas);
+    scaleBumpTex.wrapS = THREE.RepeatWrapping;
+    scaleBumpTex.wrapT = THREE.RepeatWrapping;
+    scaleBumpTex.repeat.set(14, 2);
+    scaleBumpTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+
+    bodyMat.bumpMap = scaleBumpTex;
+    bodyMat.bumpScale = 1.6;
+    bodyMat.needsUpdate = true;
+    goldBodyMat.bumpMap = scaleBumpTex;
+    goldBodyMat.bumpScale = 1.4;
+    goldBodyMat.needsUpdate = true;
+    shadowBodyMat.bumpMap = scaleBumpTex;
+    shadowBodyMat.bumpScale = 1.5;
+    shadowBodyMat.needsUpdate = true;
+
+    let envDisposed = false;
+    let envRenderTarget = null;
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+    const envTexLoader = new THREE.TextureLoader();
+    envTexLoader.load("/lab/dragon/moon.jpg", (tex) => {
+      if (envDisposed) {
+        tex.dispose();
+        return;
+      }
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      envRenderTarget = pmrem.fromEquirectangular(tex);
+      const envMap = envRenderTarget.texture;
+      scene.environment = envMap;
+      for (const set of Object.values(pbrMatSets)) {
+        set.body.envMap = envMap;
+        set.head.envMap = envMap;
+        set.limb.envMap = envMap;
+        set.body.needsUpdate = true;
+        set.head.needsUpdate = true;
+        set.limb.needsUpdate = true;
+      }
+      tex.dispose();
     });
 
     const legData = LEG_DEFS.map((def) => {
@@ -448,7 +866,7 @@ export default function Dragon() {
       legMesh.frustumCulled = false;
       scene.add(legMesh);
       const claws = [];
-      for (let c = 0; c < 3; c++) {
+      for (let c = 0; c < N_FINGERS; c++) {
         const cGeom = buildTubeGeom(N_CLAW_RINGS, N_CLAW_FACETS);
         const cMesh = new THREE.Mesh(cGeom, limbMat);
         cMesh.frustumCulled = false;
@@ -551,13 +969,198 @@ export default function Dragon() {
       emissiveIntensity: 0.6,
       flatShading: true,
     });
-    const eyeGeo = new THREE.SphereGeometry(2.5, 10, 6);
+    const eyeGeo = new THREE.SphereGeometry(5, 16, 12);
     const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-    leftEye.position.set(-17, 4, 55);
+    leftEye.position.set(-13, -8, 53);
+    leftEye.renderOrder = 5;
     headGroup.add(leftEye);
     const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-    rightEye.position.set(17, 4, 55);
+    rightEye.position.set(13, -8, 53);
+    rightEye.renderOrder = 5;
     headGroup.add(rightEye);
+
+    const eyeHaloCanvas = document.createElement("canvas");
+    eyeHaloCanvas.width = 128;
+    eyeHaloCanvas.height = 128;
+    {
+      const ctx = eyeHaloCanvas.getContext("2d");
+      const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      grad.addColorStop(0.0, "rgba(255,255,255,1.0)");
+      grad.addColorStop(0.3, "rgba(255,255,255,0.55)");
+      grad.addColorStop(0.65, "rgba(255,255,255,0.18)");
+      grad.addColorStop(1.0, "rgba(255,255,255,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 128, 128);
+    }
+    const eyeHaloTex = new THREE.CanvasTexture(eyeHaloCanvas);
+    eyeHaloTex.colorSpace = THREE.SRGBColorSpace;
+
+    const eyeHaloMat = new THREE.SpriteMaterial({
+      map: eyeHaloTex,
+      color: 0xff8000,
+      transparent: true,
+      opacity: 0.45,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const leftEyeHalo = new THREE.Sprite(eyeHaloMat);
+    leftEyeHalo.scale.set(95, 95, 1);
+    leftEyeHalo.position.copy(leftEye.position);
+    leftEyeHalo.renderOrder = 20;
+    headGroup.add(leftEyeHalo);
+    const rightEyeHalo = new THREE.Sprite(eyeHaloMat);
+    rightEyeHalo.scale.set(95, 95, 1);
+    rightEyeHalo.position.copy(rightEye.position);
+    rightEyeHalo.renderOrder = 20;
+    headGroup.add(rightEyeHalo);
+
+    const breathCanvas = document.createElement("canvas");
+    breathCanvas.width = 128;
+    breathCanvas.height = 128;
+    {
+      const ctx = breathCanvas.getContext("2d");
+      const grad = ctx.createRadialGradient(64, 64, 3, 64, 64, 62);
+      grad.addColorStop(0.0, "rgba(255,255,255,0.95)");
+      grad.addColorStop(0.4, "rgba(255,255,255,0.45)");
+      grad.addColorStop(0.75, "rgba(255,255,255,0.12)");
+      grad.addColorStop(1.0, "rgba(255,255,255,0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 128, 128);
+      const imgData = ctx.getImageData(0, 0, 128, 128);
+      for (let i = 0; i < imgData.data.length; i += 4) {
+        const n = (Math.random() - 0.5) * 28;
+        imgData.data[i + 3] = Math.max(0, Math.min(255, imgData.data[i + 3] + n));
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+    const breathTex = new THREE.CanvasTexture(breathCanvas);
+    breathTex.colorSpace = THREE.SRGBColorSpace;
+
+    const MOUTH_FWD = 55;
+    const MOUTH_DOWN = 40;
+
+    const BREATH_POOL = 80;
+    const BREATH_CYCLE = 3.6;
+    const BREATH_EXHALE_DUR = 1.6;
+    const BREATH_BURST_COUNT = 240;
+    const breathParticles = [];
+    for (let i = 0; i < BREATH_POOL; i++) {
+      const mat = new THREE.SpriteMaterial({
+        map: breathTex,
+        color: 0xeaf2ff,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.NormalBlending,
+        depthWrite: false,
+      });
+      const sprite = new THREE.Sprite(mat);
+      sprite.visible = false;
+      sprite.renderOrder = 15;
+      scene.add(sprite);
+      breathParticles.push({
+        sprite,
+        mat,
+        x: 0, y: 0, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        life: -1,
+        maxLife: 0,
+        sizeStart: 0,
+        sizeEnd: 0,
+      });
+    }
+    let breathEmitTimer = 0;
+    let prevStepTime = -1;
+    let prevHeadX = 0, prevHeadY = 0, prevHeadZ = 0;
+    let headVx = 0, headVy = 0, headVz = 0;
+
+    function emitBreathParticle() {
+      let p = null;
+      for (const cand of breathParticles) {
+        if (cand.life < 0) { p = cand; break; }
+      }
+      if (!p) return;
+      const h = segs[0];
+      const fX = -h.tx, fY = -h.ty, fZ = -h.tz;
+      const uX = h.ux, uY = h.uy, uZ = h.uz;
+      const rX = h.rx, rY = h.ry, rZ = h.rz;
+      p.x = h.x + fX * MOUTH_FWD - uX * MOUTH_DOWN;
+      p.y = h.y + fY * MOUTH_FWD - uY * MOUTH_DOWN;
+      p.z = h.z + fZ * MOUTH_FWD - uZ * MOUTH_DOWN;
+      const fwdSpeed = 400 + Math.random() * 80;
+      const upSpeed = -240 + Math.random() * 10;
+      const latSpread = (Math.random() - 0.5) * 18;
+      p.vx = fX * fwdSpeed + uX * upSpeed + rX * latSpread + headVx;
+      p.vy = fY * fwdSpeed + uY * upSpeed + rY * latSpread + headVy;
+      p.vz = fZ * fwdSpeed + uZ * upSpeed + rZ * latSpread + headVz;
+      p.life = 0;
+      p.maxLife = 1.2 + Math.random() * 0.8;
+      p.sizeStart = 50 + Math.random() * 12;
+      p.sizeEnd = 150 + Math.random() * 60;
+      p.sprite.position.set(p.x, p.y, p.z);
+      p.sprite.scale.set(p.sizeStart, p.sizeStart, 1);
+      p.mat.opacity = 0;
+      p.sprite.visible = true;
+    }
+
+    const objHeadMat = new THREE.MeshPhongMaterial({
+      color: 0x141a22,
+      shininess: 18,
+      specular: 0x232a36,
+      flatShading: false,
+      side: THREE.FrontSide,
+    });
+    let objHeadWrap = null;
+    let objHeadDisposed = false;
+
+    const objLoader = new OBJLoader();
+    objLoader.load(
+      "/lab/dragon/dragon.obj",
+      (loaded) => {
+        if (objHeadDisposed) return;
+        const curStyle = STYLES[activeRef.current];
+        const curPbr = curStyle?.pbr ? pbrMatSets[curStyle.pbr] : null;
+        const startMat = curPbr ? curPbr.head : objHeadMat;
+        loaded.traverse((c) => {
+          if (c.isMesh) {
+            c.material = startMat;
+            c.castShadow = false;
+            c.receiveShadow = false;
+            if (c.geometry) {
+              c.geometry.computeVertexNormals();
+            }
+          }
+        });
+
+        const box = new THREE.Box3().setFromObject(loaded);
+        const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
+        box.getSize(size);
+        box.getCenter(center);
+
+        const TARGET_LEN = 230;
+        const longest = Math.max(size.x, size.y, size.z) || 1;
+        const scale = TARGET_LEN / longest;
+
+        loaded.position.set(-center.x, -center.y, -center.z);
+
+        const wrap = new THREE.Group();
+        wrap.add(loaded);
+        wrap.scale.setScalar(scale);
+        wrap.rotation.y = Math.PI / 2;
+        wrap.position.set(0, 0, -20);
+
+        headMesh.visible = false;
+        leftHorn.visible = false;
+        rightHorn.visible = false;
+
+        headGroup.add(wrap);
+        objHeadWrap = wrap;
+      },
+      undefined,
+      (err) => {
+        console.warn("Dragon head OBJ load failed:", err);
+      },
+    );
 
     const whiskerData = WHISKER_DEFS.map((def) => {
       const geom = buildTubeGeom(N_WHISKER_RINGS, N_WHISKER_FACETS);
@@ -584,6 +1187,22 @@ export default function Dragon() {
       vertexShader: FIRE_BODY_VS,
       fragmentShader: FIRE_BODY_FS,
       side: THREE.FrontSide,
+    });
+
+    const maneFireMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uIntensity: { value: 1.0 },
+        uColorBase: { value: new THREE.Color(0x6a1800) },
+        uColorMid: { value: new THREE.Color(0xff5a14) },
+        uColorTip: { value: new THREE.Color(0xfff080) },
+      },
+      vertexShader: MANE_FIRE_VS,
+      fragmentShader: MANE_FIRE_FS,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
     });
 
     const bodyParts = [
@@ -688,20 +1307,53 @@ export default function Dragon() {
       headMat.color.setHex(s.body);
       headMat.emissive.setHex(s.emissive);
       headMat.emissiveIntensity = s.emissiveIntensity;
+      objHeadMat.color.setHex(s.body);
+      objHeadMat.emissive.setHex(s.emissive);
+      objHeadMat.emissiveIntensity = s.emissiveIntensity;
       hornMat.color.setHex(s.limb);
       eyeMat.color.setHex(s.eye.color);
       eyeMat.emissive.setHex(s.eye.emissive);
       eyeMat.emissiveIntensity = s.eye.intensity;
+      eyeHaloMat.color.setHex(s.eye.emissive);
+      eyeHaloMat.opacity = s.eye.halo ?? 0.45;
       const useFire = !!s.flicker;
       for (const part of bodyParts) {
         part.mesh.material = useFire ? fireBodyMat : part.original;
       }
+      const pbrSet = s.pbr ? pbrMatSets[s.pbr] : null;
+      if (pbrSet) {
+        body.material = pbrSet.body;
+        headMesh.material = pbrSet.head;
+        if (objHeadWrap) {
+          objHeadWrap.traverse((c) => {
+            if (c.isMesh) c.material = pbrSet.head;
+          });
+        }
+        leftHorn.material = pbrSet.limb;
+        rightHorn.material = pbrSet.limb;
+        for (const leg of legData) {
+          leg.legMesh.material = pbrSet.limb;
+          for (const claw of leg.claws) {
+            claw.mesh.material = pbrSet.limb;
+          }
+        }
+      } else if (!useFire) {
+        if (objHeadWrap) {
+          objHeadWrap.traverse((c) => {
+            if (c.isMesh) c.material = objHeadMat;
+          });
+        }
+      }
       const bgTarget = container.parentElement || container;
       bgTarget.style.background = `linear-gradient(to bottom, ${s.bg[0]} 0%, ${s.bg[1]} 100%)`;
+      const useFur = !!s.fur;
+      const useManeFlame = !!s.maneFlame;
       for (const data of maneLayerData) {
+        data.mesh.visible = !useFur;
+        data.mesh.material = useManeFlame ? maneFireMat : data.mat;
         tmpColor.setHex(s.mane[data.layer.colorIdx]);
         const colArr = data.geom.attributes.color.array;
-        const n = data.layer.count * 3;
+        const n = data.layer.count * 4;
         for (let v = 0; v < n; v++) {
           const off = v * 3;
           colArr[off] = tmpColor.r;
@@ -709,13 +1361,50 @@ export default function Dragon() {
           colArr[off + 2] = tmpColor.b;
         }
         data.geom.attributes.color.needsUpdate = true;
+        const drawCount = s.maneCounts ? s.maneCounts[data.layer.colorIdx] : data.layer.count;
+        if (drawCount < data.layer.count) {
+          const posArr = data.geom.attributes.position.array;
+          for (let i = drawCount; i < data.layer.count; i++) {
+            const off = i * 12;
+            for (let j = 0; j < 12; j++) posArr[off + j] = 0;
+          }
+          data.geom.attributes.position.needsUpdate = true;
+        }
+      }
+      for (const sh of furShells) {
+        sh.mesh.visible = useFur;
+        if (useFur) {
+          sh.mat.uniforms.uColorBase.value.setHex(s.fur.base);
+          sh.mat.uniforms.uColorTip.value.setHex(s.fur.tip);
+          sh.mat.uniforms.uDensity.value.set(s.fur.densityU, s.fur.densityV);
+          sh.mat.uniforms.uLengthVar.value = s.fur.lengthVar;
+          sh.mat.uniforms.uThinness.value = s.fur.thinness;
+          sh.mat.uniforms.uShellOffset.value = s.fur.offset;
+          sh.mat.uniforms.uGravity.value.set(
+            s.fur.gravity[0],
+            s.fur.gravity[1],
+            s.fur.gravity[2],
+          );
+          const m = s.fur.mask;
+          if (m) {
+            sh.mat.uniforms.uURange.value.set(m.uMin, m.uMax);
+            sh.mat.uniforms.uVCenter.value = m.vCenter;
+            sh.mat.uniforms.uVHalfWidth.value = m.vHalfWidth;
+            sh.mat.uniforms.uMaskSoft.value = m.soft ?? 0.02;
+          } else {
+            sh.mat.uniforms.uURange.value.set(-1, 2);
+            sh.mat.uniforms.uVCenter.value = 0.5;
+            sh.mat.uniforms.uVHalfWidth.value = 0.6;
+            sh.mat.uniforms.uMaskSoft.value = 0.001;
+          }
+        }
       }
     }
     let currentStyleId = active;
     applyStyle(STYLES[active]);
 
     let idleBlend = 1;
-    const HEAD_LERP = 0.07;
+    const HEAD_LERP = 0.045;
     let raf = 0;
 
     function step(now) {
@@ -735,8 +1424,8 @@ export default function Dragon() {
       const ampY = 320;
       const driftCx = ampX * 0.6 * Math.sin(now * 0.00014);
       const driftCy = ampY * 0.6 * Math.cos(now * 0.00018 + 1.7);
-      const idleCx = driftCx + ampX * 0.55 * Math.sin(now * 0.00126);
-      const idleCy = driftCy + ampY * 0.55 * Math.sin(now * 0.00126 + 1.2);
+      const idleCx = driftCx + ampX * 0.55 * Math.sin(now * 0.00082);
+      const idleCy = driftCy + ampY * 0.55 * Math.sin(now * 0.00082 + 1.2);
 
       const tx = mouse.wx + (idleCx - mouse.wx) * idleBlend;
       const ty = mouse.wy + (idleCy - mouse.wy) * idleBlend;
@@ -751,13 +1440,45 @@ export default function Dragon() {
         const b = segs[i];
         const tb = i / (N_SEGS - 1);
         const cd = CHAIN_DIST * Math.max(0.25, radiusAt(tb) / BODY_R);
-        const dx = a.x - b.x;
-        const dy = a.y - b.y;
-        const dz = a.z - b.z;
-        const d = Math.hypot(dx, dy, dz) || 1;
-        b.x = a.x - (dx / d) * cd;
-        b.y = a.y - (dy / d) * cd;
-        b.z = a.z - (dz / d) * cd;
+
+        let dirX = b.x - a.x;
+        let dirY = b.y - a.y;
+        let dirZ = b.z - a.z;
+        const dl = Math.hypot(dirX, dirY, dirZ) || 1;
+        dirX /= dl; dirY /= dl; dirZ /= dl;
+
+        let inX, inY, inZ;
+        if (i === 1) {
+          inX = segs[0].tx; inY = segs[0].ty; inZ = segs[0].tz;
+        } else {
+          const aa = segs[i - 2];
+          inX = a.x - aa.x;
+          inY = a.y - aa.y;
+          inZ = a.z - aa.z;
+          const il = Math.hypot(inX, inY, inZ) || 1;
+          inX /= il; inY /= il; inZ /= il;
+        }
+
+        const cosA = inX * dirX + inY * dirY + inZ * dirZ;
+        if (cosA < MAX_BEND_COS) {
+          let axX = inY * dirZ - inZ * dirY;
+          let axY = inZ * dirX - inX * dirZ;
+          let axZ = inX * dirY - inY * dirX;
+          const axL = Math.hypot(axX, axY, axZ);
+          if (axL > 1e-6) {
+            axX /= axL; axY /= axL; axZ /= axL;
+            const kxvX = axY * inZ - axZ * inY;
+            const kxvY = axZ * inX - axX * inZ;
+            const kxvZ = axX * inY - axY * inX;
+            dirX = inX * MAX_BEND_COS + kxvX * MAX_BEND_SIN;
+            dirY = inY * MAX_BEND_COS + kxvY * MAX_BEND_SIN;
+            dirZ = inZ * MAX_BEND_COS + kxvZ * MAX_BEND_SIN;
+          }
+        }
+
+        b.x = a.x + dirX * cd;
+        b.y = a.y + dirY * cd;
+        b.z = a.z + dirZ * cd;
       }
 
       for (let i = 0; i < N_SEGS; i++) {
@@ -871,7 +1592,8 @@ export default function Dragon() {
         const { layer, params, geom } = data;
         const pos = geom.attributes.position.array;
         const col = style.flicker ? geom.attributes.color.array : null;
-        for (let i = 0; i < layer.count; i++) {
+        const drawCount = style.maneCounts ? style.maneCounts[layer.colorIdx] : layer.count;
+        for (let i = 0; i < drawCount; i++) {
           const p = params[i];
           const segIdxF = maneStart + maneRange * p.baseT;
           const segI = Math.floor(segIdxF);
@@ -904,7 +1626,7 @@ export default function Dragon() {
           const baseY = sy + suy * r * baseUpFactor + sry * lateralOff;
           const baseZ = sz + suz * r * baseUpFactor + srz * lateralOff;
 
-          const strokeLen = r * 2.2 * p.lenRand * layer.lenMult * (1.1 - p.baseT * 0.3);
+          const strokeLen = r * 0.9 * p.lenRand * layer.lenMult * (1.1 - p.baseT * 0.3);
           const wave = Math.sin(now * 0.0011 + p.phaseRand) * 0.18;
 
           const cosR = Math.cos(p.rotAngle);
@@ -922,23 +1644,22 @@ export default function Dragon() {
           const tipZ = baseZ + stz * strokeLen * (0.55 + wave) + suz * strokeLen * layer.lift + srz * lateralOff * 1.3 + ptpz * tipExtra;
 
           const baseHalf = r * 0.12 * p.widthRand;
-          const baseAx = baseX + sdx * baseHalf;
-          const baseAy = baseY + sdy * baseHalf;
-          const baseAz = baseZ + sdz * baseHalf;
-          const baseBx = baseX - sdx * baseHalf;
-          const baseBy = baseY - sdy * baseHalf;
-          const baseBz = baseZ - sdz * baseHalf;
+          const HEX_H = 0.8660254;
+          const b0x = baseX + sdx * baseHalf;
+          const b0y = baseY + sdy * baseHalf;
+          const b0z = baseZ + sdz * baseHalf;
+          const b1x = baseX + (-sdx * 0.5 + ptpx * HEX_H) * baseHalf;
+          const b1y = baseY + (-sdy * 0.5 + ptpy * HEX_H) * baseHalf;
+          const b1z = baseZ + (-sdz * 0.5 + ptpz * HEX_H) * baseHalf;
+          const b2x = baseX + (-sdx * 0.5 - ptpx * HEX_H) * baseHalf;
+          const b2y = baseY + (-sdy * 0.5 - ptpy * HEX_H) * baseHalf;
+          const b2z = baseZ + (-sdz * 0.5 - ptpz * HEX_H) * baseHalf;
 
-          const off = i * 9;
-          pos[off] = baseAx;
-          pos[off + 1] = baseAy;
-          pos[off + 2] = baseAz;
-          pos[off + 3] = tipX;
-          pos[off + 4] = tipY;
-          pos[off + 5] = tipZ;
-          pos[off + 6] = baseBx;
-          pos[off + 7] = baseBy;
-          pos[off + 8] = baseBz;
+          const off = i * 12;
+          pos[off] = b0x;      pos[off + 1] = b0y;   pos[off + 2] = b0z;
+          pos[off + 3] = b1x;  pos[off + 4] = b1y;   pos[off + 5] = b1z;
+          pos[off + 6] = b2x;  pos[off + 7] = b2y;   pos[off + 8] = b2z;
+          pos[off + 9] = tipX; pos[off + 10] = tipY; pos[off + 11] = tipZ;
 
           if (col) {
             const flick = 0.45 + 0.55 * Math.sin(now * 0.009 + i * 1.7 + p.phaseRand * 4);
@@ -946,9 +1667,10 @@ export default function Dragon() {
             const cr = flickDark.r + (flickLit.r - flickDark.r) * mix;
             const cg = flickDark.g + (flickLit.g - flickDark.g) * mix;
             const cb = flickDark.b + (flickLit.b - flickDark.b) * mix;
-            col[off] = cr; col[off + 1] = cg; col[off + 2] = cb;
-            col[off + 3] = cr; col[off + 4] = cg; col[off + 5] = cb;
-            col[off + 6] = cr; col[off + 7] = cg; col[off + 8] = cb;
+            col[off] = cr;     col[off + 1] = cg;  col[off + 2] = cb;
+            col[off + 3] = cr; col[off + 4] = cg;  col[off + 5] = cb;
+            col[off + 6] = cr; col[off + 7] = cg;  col[off + 8] = cb;
+            col[off + 9] = cr; col[off + 10] = cg; col[off + 11] = cb;
           }
         }
         geom.attributes.position.needsUpdate = true;
@@ -1006,7 +1728,13 @@ export default function Dragon() {
           leg.legPts[i * 3] = px;
           leg.legPts[i * 3 + 1] = py;
           leg.legPts[i * 3 + 2] = pz;
-          leg.legR[i] = t <= 0.5 ? 5 - t * 2 : 4 - (t - 0.5) * 2;
+          if (t <= 0.5) {
+            leg.legR[i] = 6.5 - t * 5;
+          } else if (t <= 0.86) {
+            leg.legR[i] = 4 - (t - 0.5) * 4.5;
+          } else {
+            leg.legR[i] = 2.4 + (t - 0.86) * 14;
+          }
         }
         updateTubeRings(
           leg.legGeom, leg.legPts, leg.legR,
@@ -1014,7 +1742,7 @@ export default function Dragon() {
           s.rx * def.side, s.ry * def.side, s.rz * def.side,
         );
 
-        const CLAW = 16;
+        const CLAW = 21;
         const baseCX = -s.ux;
         const baseCY = -s.uy;
         const baseCZ = -s.uz;
@@ -1027,8 +1755,8 @@ export default function Dragon() {
         const sinS = Math.sin(0.18);
         const cosS = Math.cos(0.18);
 
-        for (let c = 0; c < 3; c++) {
-          const angF = (c - 1) * 0.55;
+        for (let c = 0; c < N_FINGERS; c++) {
+          const angF = (c - (N_FINGERS - 1) / 2) * 0.42;
           const cosF = Math.cos(angF);
           const sinF = Math.sin(angF);
           const dx = baseCX * cosF * cosS + spreadFX * sinF + spreadSX * sinS * cosF;
@@ -1038,9 +1766,9 @@ export default function Dragon() {
           const tipX = wx + (dx / dl) * CLAW;
           const tipY = wy + (dy / dl) * CLAW;
           const tipZ = wz + (dz / dl) * CLAW;
-          const midX = wx + (dx / dl) * CLAW * 0.5 - s.tx * 1.5;
-          const midY = wy + (dy / dl) * CLAW * 0.5 - s.ty * 1.5;
-          const midZ = wz + (dz / dl) * CLAW * 0.5 - s.tz * 1.5;
+          const midX = wx + (dx / dl) * CLAW * 0.45 - s.tx * 4.5;
+          const midY = wy + (dy / dl) * CLAW * 0.45 - s.ty * 4.5;
+          const midZ = wz + (dz / dl) * CLAW * 0.45 - s.tz * 4.5;
 
           for (let i = 0; i < N_CLAW_RINGS; i++) {
             const t = i / (N_CLAW_RINGS - 1);
@@ -1051,7 +1779,7 @@ export default function Dragon() {
             leg.clawPts[i * 3] = bx;
             leg.clawPts[i * 3 + 1] = by;
             leg.clawPts[i * 3 + 2] = bz;
-            leg.clawR[i] = 1.6 - t * 1.3;
+            leg.clawR[i] = 1.9 - t * 1.75;
           }
           updateTubeRings(
             leg.claws[c].geom, leg.clawPts, leg.clawR,
@@ -1102,9 +1830,9 @@ export default function Dragon() {
             const btz = sA.tz * f1 + sB.tz * f2;
 
             const snoutInfl = Math.max(0, 1 - t * 7);
-            const fwdOff = 56 * snoutInfl;
-            const baseLat = 10 + (BODY_R * 2.0 - 10) * (1 - snoutInfl);
-            const baseDown = -6 + (-BODY_R * 0.35 - (-6)) * (1 - snoutInfl);
+            const fwdOff = 90 * snoutInfl;
+            const baseLat = 5 + (BODY_R * 2.0 - 10) * (1 - snoutInfl);
+            const baseDown = -18 + (-BODY_R * 0.35 - (-10)) * (1 - snoutInfl);
 
             const wavL = Math.sin(tWave + t * 6.8 + def.phase) * (6 + t * 32);
             const wavU = Math.cos(tWave * 0.72 + t * 5.0 + def.phase * 1.4) * (3 + t * 12);
@@ -1134,6 +1862,72 @@ export default function Dragon() {
         fireBodyMat.uniforms.uIntensity.value = Math.max(0.55, f);
       }
 
+      if (style.maneFlame) {
+        maneFireMat.uniforms.uTime.value = now * 0.001;
+        const ff = 0.85 + 0.15 * Math.sin(now * 0.013) + 0.07 * Math.sin(now * 0.027 + 1.2);
+        maneFireMat.uniforms.uIntensity.value = Math.max(0.6, ff);
+      }
+
+      if (prevStepTime < 0) {
+        prevStepTime = now;
+        prevHeadX = segs[0].x;
+        prevHeadY = segs[0].y;
+        prevHeadZ = segs[0].z;
+      }
+      const dt = Math.min(0.1, (now - prevStepTime) / 1000);
+      prevStepTime = now;
+
+      {
+        const h = segs[0];
+        if (dt > 1e-4) {
+          headVx = (h.x - prevHeadX) / dt;
+          headVy = (h.y - prevHeadY) / dt;
+          headVz = (h.z - prevHeadZ) / dt;
+        } else {
+          headVx = 0; headVy = 0; headVz = 0;
+        }
+        prevHeadX = h.x;
+        prevHeadY = h.y;
+        prevHeadZ = h.z;
+      }
+
+      const breathCycleT = (now / 1000) % BREATH_CYCLE;
+      const inExhale = breathCycleT < BREATH_EXHALE_DUR;
+      if (inExhale) {
+        breathEmitTimer += dt;
+        const emitInterval = BREATH_EXHALE_DUR / BREATH_BURST_COUNT;
+        while (breathEmitTimer >= emitInterval) {
+          breathEmitTimer -= emitInterval;
+          emitBreathParticle();
+        }
+      } else {
+        breathEmitTimer = 0;
+      }
+
+      for (const p of breathParticles) {
+        if (p.life < 0) continue;
+        p.life += dt;
+        if (p.life >= p.maxLife) {
+          p.life = -1;
+          p.sprite.visible = false;
+          continue;
+        }
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.z += p.vz * dt;
+        const drag = Math.pow(0.15, dt);
+        p.vx *= drag;
+        p.vy *= drag;
+        p.vz *= drag;
+        p.vy += 600 * dt;
+        p.sprite.position.set(p.x, p.y, p.z);
+        const tLife = p.life / p.maxLife;
+        const size = p.sizeStart + (p.sizeEnd - p.sizeStart) * tLife;
+        p.sprite.scale.set(size, size, 1);
+        const fade = tLife < 0.2 ? tLife / 0.2 : 1 - (tLife - 0.2) / 0.8;
+        p.mat.opacity = Math.max(0, fade) * 0.02;
+      }
+
       renderer.render(scene, camera);
       raf = requestAnimationFrame(step);
     }
@@ -1152,6 +1946,9 @@ export default function Dragon() {
         data.geom.dispose();
         data.mat.dispose();
       }
+      for (const sh of furShells) {
+        sh.mat.dispose();
+      }
       for (const leg of legData) {
         leg.legGeom.dispose();
         for (const claw of leg.claws) claw.geom.dispose();
@@ -1164,7 +1961,35 @@ export default function Dragon() {
       hornMat.dispose();
       eyeGeo.dispose();
       eyeMat.dispose();
+      eyeHaloTex.dispose();
+      eyeHaloMat.dispose();
+      breathTex.dispose();
+      for (const p of breathParticles) {
+        p.mat.dispose();
+      }
+      objHeadDisposed = true;
+      if (objHeadWrap) {
+        objHeadWrap.traverse((c) => {
+          if (c.geometry) c.geometry.dispose();
+        });
+      }
+      objHeadMat.dispose();
+      envDisposed = true;
+      goldBodyMat.dispose();
+      goldHeadMat.dispose();
+      goldLimbMat.dispose();
+      shadowBodyMat.dispose();
+      shadowHeadMat.dispose();
+      shadowLimbMat.dispose();
+      glassBodyMat.dispose();
+      glassHeadMat.dispose();
+      glassLimbMat.dispose();
+      scaleBumpTex.dispose();
+      if (envRenderTarget) envRenderTarget.dispose();
+      pmrem.dispose();
+      scene.environment = null;
       fireBodyMat.dispose();
+      maneFireMat.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);
@@ -1184,6 +2009,15 @@ export default function Dragon() {
       <div
         ref={containerRef}
         className="absolute inset-0 w-full h-full touch-none select-none"
+      />
+
+      <img
+        ref={branchRef}
+        src="/lab/dragon/branches.webp"
+        alt=""
+        aria-hidden="true"
+        className="pointer-events-none select-none absolute inset-0 w-full h-full object-cover z-20 will-change-transform"
+        style={{ mixBlendMode: "multiply", transform: "scale(1.06)" }}
       />
 
       <div className="fixed bottom-4 left-4 z-30 flex gap-1 bg-white/5 border border-white/10 rounded p-1 backdrop-blur-sm text-[12px]">
