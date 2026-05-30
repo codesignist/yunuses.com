@@ -328,33 +328,12 @@ const FUR_FS = `
   }
 `;
 
-const N_LEG_RINGS = 13;
-const N_LEG_FACETS = 8;
-const N_CLAW_RINGS = 6;
-const N_CLAW_FACETS = 5;
-const N_FINGERS = 4;
-
 const LEG_DEFS = [
-  { segIdx: 6, side: -1, phase: 0 },
-  { segIdx: 6, side: 1, phase: Math.PI },
-  { segIdx: 31, side: -1, phase: Math.PI * 0.5 },
-  { segIdx: 31, side: 1, phase: Math.PI * 1.5 },
+  { segIdx: 6, side: -1 },
+  { segIdx: 6, side: 1 },
+  { segIdx: 31, side: -1 },
+  { segIdx: 31, side: 1 },
 ];
-
-const cosL = new Float32Array(N_LEG_FACETS);
-const sinL = new Float32Array(N_LEG_FACETS);
-for (let k = 0; k < N_LEG_FACETS; k++) {
-  const a = (k / N_LEG_FACETS) * Math.PI * 2;
-  cosL[k] = Math.cos(a);
-  sinL[k] = Math.sin(a);
-}
-const cosC = new Float32Array(N_CLAW_FACETS);
-const sinC = new Float32Array(N_CLAW_FACETS);
-for (let k = 0; k < N_CLAW_FACETS; k++) {
-  const a = (k / N_CLAW_FACETS) * Math.PI * 2;
-  cosC[k] = Math.cos(a);
-  sinC[k] = Math.sin(a);
-}
 
 const N_WHISKER_RINGS = 18;
 const N_WHISKER_FACETS = 6;
@@ -372,7 +351,7 @@ for (let k = 0; k < N_WHISKER_FACETS; k++) {
   sinW[k] = Math.sin(a);
 }
 
-const TUBE_SCRATCH_MAX = Math.max(N_LEG_RINGS, N_CLAW_RINGS, N_WHISKER_RINGS);
+const TUBE_SCRATCH_MAX = N_WHISKER_RINGS;
 const _tx = new Float32Array(TUBE_SCRATCH_MAX);
 const _ty = new Float32Array(TUBE_SCRATCH_MAX);
 const _tz = new Float32Array(TUBE_SCRATCH_MAX);
@@ -860,30 +839,7 @@ export default function Dragon() {
       tex.dispose();
     });
 
-    const legData = LEG_DEFS.map((def) => {
-      const legGeom = buildTubeGeom(N_LEG_RINGS, N_LEG_FACETS);
-      const legMesh = new THREE.Mesh(legGeom, limbMat);
-      legMesh.frustumCulled = false;
-      scene.add(legMesh);
-      const claws = [];
-      for (let c = 0; c < N_FINGERS; c++) {
-        const cGeom = buildTubeGeom(N_CLAW_RINGS, N_CLAW_FACETS);
-        const cMesh = new THREE.Mesh(cGeom, limbMat);
-        cMesh.frustumCulled = false;
-        scene.add(cMesh);
-        claws.push({ geom: cGeom, mesh: cMesh });
-      }
-      return {
-        def,
-        legGeom,
-        legMesh,
-        claws,
-        legPts: new Float32Array(N_LEG_RINGS * 3),
-        legR: new Float32Array(N_LEG_RINGS),
-        clawPts: new Float32Array(N_CLAW_RINGS * 3),
-        clawR: new Float32Array(N_CLAW_RINGS),
-      };
-    });
+    const legData = LEG_DEFS.map((def) => ({ def, objWrap: null }));
 
     const headGroup = new THREE.Group();
     scene.add(headGroup);
@@ -1162,6 +1118,70 @@ export default function Dragon() {
       },
     );
 
+    let objLimbDisposed = false;
+    const objLimbGeomsBase = [];
+    const objLimbGeomsMirror = [];
+    const objLimbMeshes = [];
+
+    function mirrorGeomX(srcGeom) {
+      const g = srcGeom.clone();
+      const pos = g.attributes.position;
+      const a = pos.array;
+      for (let i = 0; i < a.length; i += 3) a[i] = -a[i];
+      pos.needsUpdate = true;
+      if (g.index) {
+        const ia = g.index.array;
+        for (let i = 0; i < ia.length; i += 3) {
+          const t = ia[i]; ia[i] = ia[i + 2]; ia[i + 2] = t;
+        }
+        g.index.needsUpdate = true;
+      }
+      g.computeVertexNormals();
+      return g;
+    }
+
+    const objLimbLoader = new OBJLoader();
+    objLimbLoader.load(
+      "/lab/dragon/limb.obj",
+      (loaded) => {
+        if (objLimbDisposed) return;
+        const sourceGeoms = [];
+        loaded.traverse((c) => {
+          if (c.isMesh && c.geometry) {
+            c.geometry.computeVertexNormals();
+            sourceGeoms.push(c.geometry);
+          }
+        });
+        if (sourceGeoms.length === 0) return;
+
+        for (const sg of sourceGeoms) {
+          objLimbGeomsBase.push(sg);
+          objLimbGeomsMirror.push(mirrorGeomX(sg));
+        }
+
+        const curStyle = STYLES[activeRef.current];
+        const curPbr = curStyle?.pbr ? pbrMatSets[curStyle.pbr] : null;
+        const startMat = curPbr ? curPbr.limb : limbMat;
+
+        for (const leg of legData) {
+          const wrap = new THREE.Group();
+          const useGeoms = leg.def.side === 1 ? objLimbGeomsMirror : objLimbGeomsBase;
+          for (const g of useGeoms) {
+            const mesh = new THREE.Mesh(g, startMat);
+            mesh.frustumCulled = false;
+            wrap.add(mesh);
+            objLimbMeshes.push(mesh);
+          }
+          scene.add(wrap);
+          leg.objWrap = wrap;
+        }
+      },
+      undefined,
+      (err) => {
+        console.warn("Dragon limb OBJ load failed:", err);
+      },
+    );
+
     const whiskerData = WHISKER_DEFS.map((def) => {
       const geom = buildTubeGeom(N_WHISKER_RINGS, N_WHISKER_FACETS);
       const mesh = new THREE.Mesh(geom, limbMat);
@@ -1211,12 +1231,6 @@ export default function Dragon() {
       { mesh: leftHorn, original: hornMat },
       { mesh: rightHorn, original: hornMat },
     ];
-    for (const leg of legData) {
-      bodyParts.push({ mesh: leg.legMesh, original: limbMat });
-      for (const claw of leg.claws) {
-        bodyParts.push({ mesh: claw.mesh, original: limbMat });
-      }
-    }
 
     const cosA = new Float32Array(N_FACETS);
     const sinA = new Float32Array(N_FACETS);
@@ -1331,11 +1345,8 @@ export default function Dragon() {
         }
         leftHorn.material = pbrSet.limb;
         rightHorn.material = pbrSet.limb;
-        for (const leg of legData) {
-          leg.legMesh.material = pbrSet.limb;
-          for (const claw of leg.claws) {
-            claw.mesh.material = pbrSet.limb;
-          }
+        for (const mesh of objLimbMeshes) {
+          mesh.material = pbrSet.limb;
         }
       } else if (!useFire) {
         if (objHeadWrap) {
@@ -1678,115 +1689,22 @@ export default function Dragon() {
       }
 
       for (const leg of legData) {
+        if (!leg.objWrap) continue;
         const def = leg.def;
         if (def.segIdx >= N_SEGS) continue;
         const s = segs[def.segIdx];
 
         const ATT_OUT = BODY_R * 0.88;
         const ATT_DOWN = BODY_R * 0.4;
-        const shx = s.x + s.rx * def.side * ATT_OUT - s.ux * ATT_DOWN;
-        const shy = s.y + s.ry * def.side * ATT_OUT - s.uy * ATT_DOWN;
-        const shz = s.z + s.rz * def.side * ATT_OUT - s.uz * ATT_DOWN;
-
-        const ph = now * 0.0022 + def.phase;
-        const swing1 = Math.sin(ph) * 0.45;
-        const swing2 = Math.sin(ph * 1.3 + 0.7) * 0.35;
-
-        const UPPER = 32;
-        const LOWER = 28;
-
-        const upDx = -s.ux * 0.55 + s.rx * def.side * 0.5 + s.tx * swing1;
-        const upDy = -s.uy * 0.55 + s.ry * def.side * 0.5 + s.ty * swing1;
-        const upDz = -s.uz * 0.55 + s.rz * def.side * 0.5 + s.tz * swing1;
-        const upL = Math.hypot(upDx, upDy, upDz) || 1;
-        const elx = shx + (upDx / upL) * UPPER;
-        const ely = shy + (upDy / upL) * UPPER;
-        const elz = shz + (upDz / upL) * UPPER;
-
-        const loDx = -s.ux * 0.92 + s.tx * swing2 + s.rx * def.side * 0.15;
-        const loDy = -s.uy * 0.92 + s.ty * swing2 + s.ry * def.side * 0.15;
-        const loDz = -s.uz * 0.92 + s.tz * swing2 + s.rz * def.side * 0.15;
-        const loL = Math.hypot(loDx, loDy, loDz) || 1;
-        const wx = elx + (loDx / loL) * LOWER;
-        const wy = ely + (loDy / loL) * LOWER;
-        const wz = elz + (loDz / loL) * LOWER;
-
-        for (let i = 0; i < N_LEG_RINGS; i++) {
-          const t = i / (N_LEG_RINGS - 1);
-          let px, py, pz;
-          if (t <= 0.5) {
-            const tt = t * 2;
-            px = shx + (elx - shx) * tt;
-            py = shy + (ely - shy) * tt;
-            pz = shz + (elz - shz) * tt;
-          } else {
-            const tt = (t - 0.5) * 2;
-            px = elx + (wx - elx) * tt;
-            py = ely + (wy - ely) * tt;
-            pz = elz + (wz - elz) * tt;
-          }
-          leg.legPts[i * 3] = px;
-          leg.legPts[i * 3 + 1] = py;
-          leg.legPts[i * 3 + 2] = pz;
-          if (t <= 0.5) {
-            leg.legR[i] = 6.5 - t * 5;
-          } else if (t <= 0.86) {
-            leg.legR[i] = 4 - (t - 0.5) * 4.5;
-          } else {
-            leg.legR[i] = 2.4 + (t - 0.86) * 14;
-          }
-        }
-        updateTubeRings(
-          leg.legGeom, leg.legPts, leg.legR,
-          N_LEG_RINGS, N_LEG_FACETS, cosL, sinL,
-          s.rx * def.side, s.ry * def.side, s.rz * def.side,
-        );
-
-        const CLAW = 21;
-        const baseCX = -s.ux;
-        const baseCY = -s.uy;
-        const baseCZ = -s.uz;
-        const spreadFX = s.tx;
-        const spreadFY = s.ty;
-        const spreadFZ = s.tz;
-        const spreadSX = s.rx * def.side;
-        const spreadSY = s.ry * def.side;
-        const spreadSZ = s.rz * def.side;
-        const sinS = Math.sin(0.18);
-        const cosS = Math.cos(0.18);
-
-        for (let c = 0; c < N_FINGERS; c++) {
-          const angF = (c - (N_FINGERS - 1) / 2) * 0.42;
-          const cosF = Math.cos(angF);
-          const sinF = Math.sin(angF);
-          const dx = baseCX * cosF * cosS + spreadFX * sinF + spreadSX * sinS * cosF;
-          const dy = baseCY * cosF * cosS + spreadFY * sinF + spreadSY * sinS * cosF;
-          const dz = baseCZ * cosF * cosS + spreadFZ * sinF + spreadSZ * sinS * cosF;
-          const dl = Math.hypot(dx, dy, dz) || 1;
-          const tipX = wx + (dx / dl) * CLAW;
-          const tipY = wy + (dy / dl) * CLAW;
-          const tipZ = wz + (dz / dl) * CLAW;
-          const midX = wx + (dx / dl) * CLAW * 0.45 - s.tx * 4.5;
-          const midY = wy + (dy / dl) * CLAW * 0.45 - s.ty * 4.5;
-          const midZ = wz + (dz / dl) * CLAW * 0.45 - s.tz * 4.5;
-
-          for (let i = 0; i < N_CLAW_RINGS; i++) {
-            const t = i / (N_CLAW_RINGS - 1);
-            const u = 1 - t;
-            const bx = u * u * wx + 2 * u * t * midX + t * t * tipX;
-            const by = u * u * wy + 2 * u * t * midY + t * t * tipY;
-            const bz = u * u * wz + 2 * u * t * midZ + t * t * tipZ;
-            leg.clawPts[i * 3] = bx;
-            leg.clawPts[i * 3 + 1] = by;
-            leg.clawPts[i * 3 + 2] = bz;
-            leg.clawR[i] = 1.9 - t * 1.75;
-          }
-          updateTubeRings(
-            leg.claws[c].geom, leg.clawPts, leg.clawR,
-            N_CLAW_RINGS, N_CLAW_FACETS, cosC, sinC,
-            s.ux, s.uy, s.uz,
-          );
-        }
+        const ox = s.x + s.rx * def.side * ATT_OUT - s.ux * ATT_DOWN;
+        const oy = s.y + s.ry * def.side * ATT_OUT - s.uy * ATT_DOWN;
+        const oz = s.z + s.rz * def.side * ATT_OUT - s.uz * ATT_DOWN;
+        leg.objWrap.position.set(ox, oy, oz);
+        headBasisR.set(s.rx, s.ry, s.rz);
+        headBasisU.set(s.ux, s.uy, s.uz);
+        headBasisF.set(-s.tx, -s.ty, -s.tz);
+        headBasisM.makeBasis(headBasisR, headBasisU, headBasisF);
+        leg.objWrap.quaternion.setFromRotationMatrix(headBasisM);
       }
 
       {
@@ -1949,10 +1867,9 @@ export default function Dragon() {
       for (const sh of furShells) {
         sh.mat.dispose();
       }
-      for (const leg of legData) {
-        leg.legGeom.dispose();
-        for (const claw of leg.claws) claw.geom.dispose();
-      }
+      objLimbDisposed = true;
+      for (const g of objLimbGeomsBase) g.dispose();
+      for (const g of objLimbGeomsMirror) g.dispose();
       for (const w of whiskerData) w.geom.dispose();
       limbMat.dispose();
       headGeo.dispose();
