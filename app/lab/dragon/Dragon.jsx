@@ -743,19 +743,20 @@ export default function Dragon() {
       clearcoatRoughness: 0.05,
       envMapIntensity: 1.4,
     });
+    // Kollar/bacaklar kafayla ayni renkte cam, ama ince olduklari icin
+    // kalinligi artirip attenuationDistance'i dusurerek kafa kadar koyu tint aliyorlar.
     const glassLimbMat = new THREE.MeshPhysicalMaterial({
-      color: 0xb8d4dc,
+      color: 0xd0e4ec,
       metalness: 0.0,
-      roughness: 0.1,
-      transmission: 0.8,
-      thickness: 0.9,
+      roughness: 0.05,
+      transmission: 0.82,
+      thickness: 12,
       ior: 1.5,
-      attenuationColor: new THREE.Color(0x3a7894),
-      attenuationDistance: 12,
-      clearcoat: 0.85,
-      clearcoatRoughness: 0.1,
-      flatShading: true,
-      envMapIntensity: 1.1,
+      attenuationColor: new THREE.Color(0x4a90a8),
+      attenuationDistance: 7,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
+      envMapIntensity: 1.4,
     });
 
     const pbrMatSets = {
@@ -995,10 +996,10 @@ export default function Dragon() {
     const MOUTH_FWD = 55;
     const MOUTH_DOWN = 40;
 
-    const BREATH_POOL = 80;
-    const BREATH_CYCLE = 3.6;
-    const BREATH_EXHALE_DUR = 1.6;
-    const BREATH_BURST_COUNT = 240;
+    const BREATH_POOL = 500;
+    const BREATH_CYCLE = 3.8;
+    const BREATH_EXHALE_DUR = 1.2;
+    const BREATH_BURST_COUNT = 80;
     const breathParticles = [];
     for (let i = 0; i < BREATH_POOL; i++) {
       const mat = new THREE.SpriteMaterial({
@@ -1049,9 +1050,9 @@ export default function Dragon() {
       p.vy = fY * fwdSpeed + uY * upSpeed + rY * latSpread + headVy;
       p.vz = fZ * fwdSpeed + uZ * upSpeed + rZ * latSpread + headVz;
       p.life = 0;
-      p.maxLife = 1.2 + Math.random() * 0.8;
+      p.maxLife = 1.4 + Math.random() * 0.8;
       p.sizeStart = 50 + Math.random() * 12;
-      p.sizeEnd = 150 + Math.random() * 60;
+      p.sizeEnd = 360 + Math.random() * 60;
       p.sprite.position.set(p.x, p.y, p.z);
       p.sprite.scale.set(p.sizeStart, p.sizeStart, 1);
       p.mat.opacity = 0;
@@ -1221,7 +1222,7 @@ export default function Dragon() {
       fragmentShader: MANE_FIRE_FS,
       transparent: true,
       blending: THREE.AdditiveBlending,
-      depthWrite: false,
+      depthWrite: true,
       side: THREE.DoubleSide,
     });
 
@@ -1843,7 +1844,7 @@ export default function Dragon() {
         const size = p.sizeStart + (p.sizeEnd - p.sizeStart) * tLife;
         p.sprite.scale.set(size, size, 1);
         const fade = tLife < 0.2 ? tLife / 0.2 : 1 - (tLife - 0.2) / 0.8;
-        p.mat.opacity = Math.max(0, fade) * 0.02;
+        p.mat.opacity = Math.max(0, fade) * 0.01;
       }
 
       renderer.render(scene, camera);
