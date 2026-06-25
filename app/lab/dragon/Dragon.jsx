@@ -101,84 +101,6 @@ function hash(n) {
   return x - Math.floor(x);
 }
 
-const FIRE_BODY_VS = `
-  varying vec3 vWorldPos;
-  varying vec3 vNormal;
-  varying vec3 vViewDir;
-  void main() {
-    vec4 worldPos = modelMatrix * vec4(position, 1.0);
-    vWorldPos = worldPos.xyz;
-    vNormal = normalize(mat3(modelMatrix) * normal);
-    vViewDir = normalize(cameraPosition - worldPos.xyz);
-    gl_Position = projectionMatrix * viewMatrix * worldPos;
-  }
-`;
-
-const FIRE_BODY_FS = `
-  precision highp float;
-  uniform float uTime;
-  uniform float uIntensity;
-  uniform vec3 uColorDeep;
-  uniform vec3 uColorOuter;
-  uniform vec3 uColorInner;
-  varying vec3 vWorldPos;
-  varying vec3 vNormal;
-  varying vec3 vViewDir;
-
-  float hash3(vec3 p) {
-    return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
-  }
-
-  float vnoise(vec3 p) {
-    vec3 i = floor(p);
-    vec3 f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    float n000 = hash3(i);
-    float n100 = hash3(i + vec3(1.0, 0.0, 0.0));
-    float n010 = hash3(i + vec3(0.0, 1.0, 0.0));
-    float n110 = hash3(i + vec3(1.0, 1.0, 0.0));
-    float n001 = hash3(i + vec3(0.0, 0.0, 1.0));
-    float n101 = hash3(i + vec3(1.0, 0.0, 1.0));
-    float n011 = hash3(i + vec3(0.0, 1.0, 1.0));
-    float n111 = hash3(i + vec3(1.0, 1.0, 1.0));
-    return mix(
-      mix(mix(n000, n100, f.x), mix(n010, n110, f.x), f.y),
-      mix(mix(n001, n101, f.x), mix(n011, n111, f.x), f.y),
-      f.z
-    );
-  }
-
-  float fbm(vec3 p) {
-    float v = 0.0;
-    float a = 0.5;
-    for (int i = 0; i < 4; i++) {
-      v += vnoise(p) * a;
-      p *= 2.05;
-      a *= 0.5;
-    }
-    return v;
-  }
-
-  void main() {
-    vec3 np1 = vWorldPos * 0.025 + vec3(0.0, -uTime * 1.2, uTime * 0.25);
-    vec3 np2 = vWorldPos * 0.075 + vec3(0.0, -uTime * 2.6, uTime * 0.1);
-    float n1 = fbm(np1);
-    float n2 = fbm(np2);
-    float n = clamp(n1 * 0.7 + n2 * 0.45 - 0.1, 0.0, 1.0);
-    n = pow(n, 1.1);
-
-    vec3 color = mix(uColorDeep, uColorOuter, smoothstep(0.0, 0.5, n));
-    color = mix(color, uColorInner, smoothstep(0.45, 0.9, n));
-
-    vec3 nn = normalize(vNormal);
-    vec3 v = normalize(vViewDir);
-    float rim = pow(1.0 - max(0.0, dot(nn, v)), 1.6);
-    color += uColorInner * rim * 0.45;
-
-    gl_FragColor = vec4(color * uIntensity, 1.0);
-  }
-`;
-
 const MANE_FIRE_VS = `
   attribute float aTip;
   varying float vTip;
@@ -246,85 +168,6 @@ const MANE_FIRE_FS = `
     col += uColorTip * pow(heat, 5.0) * 0.7;
 
     gl_FragColor = vec4(col * uIntensity, 1.0);
-  }
-`;
-
-const FUR_SHELLS = 14;
-const FUR_OFFSET = 6.0;
-
-const FUR_VS = `
-  uniform float uShellIdx;
-  uniform float uShellOffset;
-  uniform vec3 uGravity;
-  varying vec2 vUv;
-  varying float vShell;
-  varying vec3 vNormal;
-  varying vec3 vViewDir;
-  void main() {
-    float k = uShellIdx;
-    vec3 push = normal * (k * uShellOffset);
-    push += uGravity * (k * k * 1.8);
-    vec3 offsetPos = position + push;
-    vec4 worldPos = modelMatrix * vec4(offsetPos, 1.0);
-    vUv = uv;
-    vShell = k;
-    vNormal = normalize(mat3(modelMatrix) * normal);
-    vViewDir = normalize(cameraPosition - worldPos.xyz);
-    gl_Position = projectionMatrix * viewMatrix * worldPos;
-  }
-`;
-
-const FUR_FS = `
-  precision highp float;
-  uniform vec3 uColorBase;
-  uniform vec3 uColorTip;
-  uniform vec2 uDensity;
-  uniform float uLengthVar;
-  uniform float uThinness;
-  uniform vec2 uURange;
-  uniform float uVCenter;
-  uniform float uVHalfWidth;
-  uniform float uMaskSoft;
-  varying vec2 vUv;
-  varying float vShell;
-  varying vec3 vNormal;
-  varying vec3 vViewDir;
-
-  float hash2(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-
-  void main() {
-    float uMask = smoothstep(uURange.x, uURange.x + uMaskSoft, vUv.x)
-                * (1.0 - smoothstep(uURange.y - uMaskSoft, uURange.y, vUv.x));
-    float vDist = abs(vUv.y - uVCenter);
-    vDist = min(vDist, 1.0 - vDist);
-    float vMask = 1.0 - smoothstep(uVHalfWidth - uMaskSoft, uVHalfWidth, vDist);
-    float mask = uMask * vMask;
-
-    vec2 cellCoord = vUv * uDensity;
-    vec2 cell = floor(cellCoord);
-    vec2 cellFrac = fract(cellCoord) - 0.5;
-
-    float strandH = mix(1.0 - uLengthVar, 1.0, hash2(cell)) * mask;
-    if (vShell > strandH) discard;
-
-    float radius = uThinness * (1.0 - vShell * 0.55);
-    if (dot(cellFrac, cellFrac) > radius * radius) discard;
-
-    vec3 col = mix(uColorBase, uColorTip, vShell);
-    col *= 0.45 + 0.55 * vShell;
-
-    vec3 nrm = normalize(vNormal);
-    vec3 ldir = normalize(vec3(0.45, 0.85, 0.55));
-    float ndl = max(0.28, dot(nrm, ldir));
-    col *= ndl;
-
-    vec3 v = normalize(vViewDir);
-    float rim = pow(1.0 - max(0.0, dot(nrm, v)), 2.2);
-    col += uColorTip * rim * vShell * 0.45;
-
-    gl_FragColor = vec4(col, 1.0);
   }
 `;
 
@@ -522,6 +365,8 @@ export default function Dragon() {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     const initRect = container.getBoundingClientRect();
     renderer.setSize(initRect.width, initRect.height, false);
     renderer.domElement.style.width = "100%";
@@ -589,37 +434,10 @@ export default function Dragon() {
       side: THREE.FrontSide,
     });
     const body = new THREE.Mesh(geo, bodyMat);
+    // Gövde her zaman sahnenin merkezinde; frustum culling kapatınca
+    // her frame computeBoundingSphere cagrisina gerek kalmiyor.
+    body.frustumCulled = false;
     scene.add(body);
-
-    const furShells = [];
-    for (let s = 0; s < FUR_SHELLS; s++) {
-      const t = (s + 1) / FUR_SHELLS;
-      const mat = new THREE.ShaderMaterial({
-        uniforms: {
-          uShellIdx: { value: t },
-          uShellOffset: { value: FUR_OFFSET },
-          uGravity: { value: new THREE.Vector3(0, -0.45, 0) },
-          uColorBase: { value: new THREE.Color(0x2a1810) },
-          uColorTip: { value: new THREE.Color(0xb88860) },
-          uDensity: { value: new THREE.Vector2(64, 24) },
-          uLengthVar: { value: 0.55 },
-          uThinness: { value: 0.44 },
-          uURange: { value: new THREE.Vector2(-1, 2) },
-          uVCenter: { value: 0.5 },
-          uVHalfWidth: { value: 0.6 },
-          uMaskSoft: { value: 0.02 },
-        },
-        vertexShader: FUR_VS,
-        fragmentShader: FUR_FS,
-        side: THREE.FrontSide,
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.renderOrder = 1 + s;
-      mesh.visible = false;
-      mesh.frustumCulled = false;
-      scene.add(mesh);
-      furShells.push({ mesh, mat });
-    }
 
     const maneLayerData = MANE_LAYERS.map((layer) => {
       const params = [];
@@ -1197,19 +1015,6 @@ export default function Dragon() {
       };
     });
 
-    const fireBodyMat = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: { value: 0 },
-        uIntensity: { value: 1 },
-        uColorDeep: { value: new THREE.Color(0x6a0c00) },
-        uColorOuter: { value: new THREE.Color(0xff5a14) },
-        uColorInner: { value: new THREE.Color(0xfff080) },
-      },
-      vertexShader: FIRE_BODY_VS,
-      fragmentShader: FIRE_BODY_FS,
-      side: THREE.FrontSide,
-    });
-
     const maneFireMat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
@@ -1225,13 +1030,6 @@ export default function Dragon() {
       depthWrite: true,
       side: THREE.DoubleSide,
     });
-
-    const bodyParts = [
-      { mesh: body, original: bodyMat },
-      { mesh: headMesh, original: headMat },
-      { mesh: leftHorn, original: hornMat },
-      { mesh: rightHorn, original: hornMat },
-    ];
 
     const cosA = new Float32Array(N_FACETS);
     const sinA = new Float32Array(N_FACETS);
@@ -1331,10 +1129,6 @@ export default function Dragon() {
       eyeMat.emissiveIntensity = s.eye.intensity;
       eyeHaloMat.color.setHex(s.eye.emissive);
       eyeHaloMat.opacity = s.eye.halo ?? 0.45;
-      const useFire = !!s.flicker;
-      for (const part of bodyParts) {
-        part.mesh.material = useFire ? fireBodyMat : part.original;
-      }
       const pbrSet = s.pbr ? pbrMatSets[s.pbr] : null;
       if (pbrSet) {
         body.material = pbrSet.body;
@@ -1349,7 +1143,11 @@ export default function Dragon() {
         for (const mesh of objLimbMeshes) {
           mesh.material = pbrSet.limb;
         }
-      } else if (!useFire) {
+      } else {
+        body.material = bodyMat;
+        headMesh.material = headMat;
+        leftHorn.material = hornMat;
+        rightHorn.material = hornMat;
         if (objHeadWrap) {
           objHeadWrap.traverse((c) => {
             if (c.isMesh) c.material = objHeadMat;
@@ -1358,10 +1156,9 @@ export default function Dragon() {
       }
       const bgTarget = container.parentElement || container;
       bgTarget.style.background = `linear-gradient(to bottom, ${s.bg[0]} 0%, ${s.bg[1]} 100%)`;
-      const useFur = !!s.fur;
       const useManeFlame = !!s.maneFlame;
       for (const data of maneLayerData) {
-        data.mesh.visible = !useFur;
+        data.mesh.visible = true;
         data.mesh.material = useManeFlame ? maneFireMat : data.mat;
         tmpColor.setHex(s.mane[data.layer.colorIdx]);
         const colArr = data.geom.attributes.color.array;
@@ -1381,34 +1178,6 @@ export default function Dragon() {
             for (let j = 0; j < 12; j++) posArr[off + j] = 0;
           }
           data.geom.attributes.position.needsUpdate = true;
-        }
-      }
-      for (const sh of furShells) {
-        sh.mesh.visible = useFur;
-        if (useFur) {
-          sh.mat.uniforms.uColorBase.value.setHex(s.fur.base);
-          sh.mat.uniforms.uColorTip.value.setHex(s.fur.tip);
-          sh.mat.uniforms.uDensity.value.set(s.fur.densityU, s.fur.densityV);
-          sh.mat.uniforms.uLengthVar.value = s.fur.lengthVar;
-          sh.mat.uniforms.uThinness.value = s.fur.thinness;
-          sh.mat.uniforms.uShellOffset.value = s.fur.offset;
-          sh.mat.uniforms.uGravity.value.set(
-            s.fur.gravity[0],
-            s.fur.gravity[1],
-            s.fur.gravity[2],
-          );
-          const m = s.fur.mask;
-          if (m) {
-            sh.mat.uniforms.uURange.value.set(m.uMin, m.uMax);
-            sh.mat.uniforms.uVCenter.value = m.vCenter;
-            sh.mat.uniforms.uVHalfWidth.value = m.vHalfWidth;
-            sh.mat.uniforms.uMaskSoft.value = m.soft ?? 0.02;
-          } else {
-            sh.mat.uniforms.uURange.value.set(-1, 2);
-            sh.mat.uniforms.uVCenter.value = 0.5;
-            sh.mat.uniforms.uVHalfWidth.value = 0.6;
-            sh.mat.uniforms.uMaskSoft.value = 0.001;
-          }
         }
       }
     }
@@ -1580,30 +1349,15 @@ export default function Dragon() {
       }
       geo.attributes.position.needsUpdate = true;
       geo.attributes.normal.needsUpdate = true;
-      geo.computeBoundingSphere();
 
-      if (style.flicker) {
-        const f = 0.82 + 0.18 * Math.sin(now * 0.011) + 0.08 * Math.sin(now * 0.024);
-        const fClamp = Math.max(0.3, f);
-        bodyMat.emissiveIntensity = style.emissiveIntensity * fClamp;
-        headMat.emissiveIntensity = style.emissiveIntensity * fClamp;
-        eyeMat.emissiveIntensity = style.eye.intensity * (0.75 + 0.25 * Math.sin(now * 0.006));
-        dirLight.intensity = style.lightIntensity * (0.9 + 0.1 * Math.sin(now * 0.018));
-      }
+      eyeMat.emissiveIntensity = style.eye.intensity * (0.85 + 0.15 * Math.sin(now * 0.005));
 
       const maneStart = 0;
       const maneEnd = Math.min(N_SEGS - 4, 36);
       const maneRange = maneEnd - maneStart;
-      let flickDark = null;
-      let flickLit = null;
-      if (style.flicker) {
-        flickDark = new THREE.Color(style.mane[0]);
-        flickLit = new THREE.Color(style.mane[2]);
-      }
       for (const data of maneLayerData) {
         const { layer, params, geom } = data;
         const pos = geom.attributes.position.array;
-        const col = style.flicker ? geom.attributes.color.array : null;
         const drawCount = style.maneCounts ? style.maneCounts[layer.colorIdx] : layer.count;
         for (let i = 0; i < drawCount; i++) {
           const p = params[i];
@@ -1672,21 +1426,8 @@ export default function Dragon() {
           pos[off + 3] = b1x;  pos[off + 4] = b1y;   pos[off + 5] = b1z;
           pos[off + 6] = b2x;  pos[off + 7] = b2y;   pos[off + 8] = b2z;
           pos[off + 9] = tipX; pos[off + 10] = tipY; pos[off + 11] = tipZ;
-
-          if (col) {
-            const flick = 0.45 + 0.55 * Math.sin(now * 0.009 + i * 1.7 + p.phaseRand * 4);
-            const mix = Math.max(0, Math.min(1, p.baseT * 0.3 + flick * 0.85));
-            const cr = flickDark.r + (flickLit.r - flickDark.r) * mix;
-            const cg = flickDark.g + (flickLit.g - flickDark.g) * mix;
-            const cb = flickDark.b + (flickLit.b - flickDark.b) * mix;
-            col[off] = cr;     col[off + 1] = cg;  col[off + 2] = cb;
-            col[off + 3] = cr; col[off + 4] = cg;  col[off + 5] = cb;
-            col[off + 6] = cr; col[off + 7] = cg;  col[off + 8] = cb;
-            col[off + 9] = cr; col[off + 10] = cg; col[off + 11] = cb;
-          }
         }
         geom.attributes.position.needsUpdate = true;
-        if (col) geom.attributes.color.needsUpdate = true;
       }
 
       for (const leg of legData) {
@@ -1775,12 +1516,6 @@ export default function Dragon() {
         }
       }
 
-      if (style.flicker) {
-        fireBodyMat.uniforms.uTime.value = now * 0.001;
-        const f = 0.82 + 0.18 * Math.sin(now * 0.011) + 0.08 * Math.sin(now * 0.024);
-        fireBodyMat.uniforms.uIntensity.value = Math.max(0.55, f);
-      }
-
       if (style.maneFlame) {
         maneFireMat.uniforms.uTime.value = now * 0.001;
         const ff = 0.85 + 0.15 * Math.sin(now * 0.013) + 0.07 * Math.sin(now * 0.027 + 1.2);
@@ -1865,9 +1600,6 @@ export default function Dragon() {
         data.geom.dispose();
         data.mat.dispose();
       }
-      for (const sh of furShells) {
-        sh.mat.dispose();
-      }
       objLimbDisposed = true;
       for (const g of objLimbGeomsBase) g.dispose();
       for (const g of objLimbGeomsMirror) g.dispose();
@@ -1906,7 +1638,6 @@ export default function Dragon() {
       if (envRenderTarget) envRenderTarget.dispose();
       pmrem.dispose();
       scene.environment = null;
-      fireBodyMat.dispose();
       maneFireMat.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) {
