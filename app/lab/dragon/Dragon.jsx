@@ -322,6 +322,18 @@ export default function Dragon() {
     activeRef.current = active;
   }, [active]);
 
+  // 1 / 2 / 3 tuslari ile stil degistir (Golge / Altin / Cam)
+  useEffect(() => {
+    const ids = Object.keys(STYLES);
+    function onKey(e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const idx = parseInt(e.key, 10) - 1;
+      if (idx >= 0 && idx < ids.length) setActive(ids[idx]);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   useEffect(() => {
     let raf = 0;
     let tx = 0, ty = 0;
@@ -1670,16 +1682,19 @@ export default function Dragon() {
       />
 
       <div className="fixed bottom-4 left-4 z-30 flex gap-1 bg-white/5 border border-white/10 rounded p-1 backdrop-blur-sm text-[12px]">
-        {Object.entries(STYLES).map(([id, s]) => (
+        {Object.entries(STYLES).map(([id, s], i) => (
           <button
             key={id}
             onClick={() => setActive(id)}
-            className={`px-2 py-1 rounded transition ${
+            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded transition ${
               active === id
                 ? "bg-white/20 text-white"
                 : "text-white/65 hover:text-white hover:bg-white/10"
             }`}
           >
+            <kbd className="text-[10px] leading-none px-1 py-0.5 rounded bg-white/10 border border-white/15 text-white/60">
+              {i + 1}
+            </kbd>
             {s.label}
           </button>
         ))}
