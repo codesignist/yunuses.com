@@ -24,6 +24,9 @@ const SEG_LEN = 16;
 const SEG_GAP = 5;
 const CHAIN_DIST = SEG_LEN + SEG_GAP;
 const N_FACETS = 16;
+// Halka basina vertex sayisi: UV dikisi icin ilk vertex sonda v=1 ile kopyalaniyor,
+// yoksa son yuzeyde v 0.94'ten 0'a geri sarip bump dokusunu geriye dogru yayiyor.
+const N_RING = N_FACETS + 1;
 const IDLE_DELAY = 1500;
 const Z_AMP = 200;
 
@@ -353,9 +356,14 @@ export default function Dragon() {
       if (!e.touches || !e.touches[0]) return;
       onMove(e.touches[0]);
     }
-    function tick() {
-      curX += (tx - curX) * 0.06;
-      curY += (ty - curY) * 0.06;
+    let prevTick = 0;
+    function tick(t) {
+      // 0.06'lik lerp 60 fps'e gore; kare hizindan bagimsiz esdegeri.
+      const dt = prevTick ? Math.min(0.1, (t - prevTick) / 1000) : 0;
+      prevTick = t;
+      const k = 1 - Math.pow(1 - 0.06, dt * 60);
+      curX += (tx - curX) * k;
+      curY += (ty - curY) * k;
       const el = branchRef.current;
       if (el) {
         el.style.transform = `scale(1.06) translate3d(${curX.toFixed(2)}px, ${curY.toFixed(2)}px, 0)`;
@@ -404,14 +412,14 @@ export default function Dragon() {
     const ambLight = new THREE.AmbientLight(0xffffff, 0.3);
     scene.add(ambLight);
 
-    const positions = new Float32Array(N_SEGS * N_FACETS * 3);
-    const normals = new Float32Array(N_SEGS * N_FACETS * 3);
-    const uvs = new Float32Array(N_SEGS * N_FACETS * 2);
+    const positions = new Float32Array(N_SEGS * N_RING * 3);
+    const normals = new Float32Array(N_SEGS * N_RING * 3);
+    const uvs = new Float32Array(N_SEGS * N_RING * 2);
     for (let i = 0; i < N_SEGS; i++) {
-      for (let k = 0; k < N_FACETS; k++) {
+      for (let k = 0; k < N_RING; k++) {
         const u = i / (N_SEGS - 1);
         const v = k / N_FACETS;
-        const idx = (i * N_FACETS + k) * 2;
+        const idx = (i * N_RING + k) * 2;
         uvs[idx] = u;
         uvs[idx + 1] = v;
       }
@@ -420,11 +428,10 @@ export default function Dragon() {
     let ii = 0;
     for (let i = 0; i < N_SEGS - 1; i++) {
       for (let k = 0; k < N_FACETS; k++) {
-        const k2 = (k + 1) % N_FACETS;
-        const a = i * N_FACETS + k;
-        const b = i * N_FACETS + k2;
-        const c = (i + 1) * N_FACETS + k2;
-        const d = (i + 1) * N_FACETS + k;
+        const a = i * N_RING + k;
+        const b = i * N_RING + k + 1;
+        const c = (i + 1) * N_RING + k + 1;
+        const d = (i + 1) * N_RING + k;
         indices[ii++] = a;
         indices[ii++] = b;
         indices[ii++] = c;
@@ -438,19 +445,6 @@ export default function Dragon() {
     geo.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
     geo.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(new THREE.BufferAttribute(indices, 1));
-
-    const bodyMat = new THREE.MeshPhongMaterial({
-      color: 0x141a22,
-      shininess: 12,
-      specular: 0x1a2030,
-      flatShading: false,
-      side: THREE.FrontSide,
-    });
-    const body = new THREE.Mesh(geo, bodyMat);
-    // Gövde her zaman sahnenin merkezinde; frustum culling kapatınca
-    // her frame computeBoundingSphere cagrisina gerek kalmiyor.
-    body.frustumCulled = false;
-    scene.add(body);
 
     const maneLayerData = MANE_LAYERS.map((layer) => {
       const params = [];
@@ -593,6 +587,15 @@ export default function Dragon() {
       shadow: { body: shadowBodyMat, head: shadowHeadMat, limb: shadowLimbMat },
       glass: { body: glassBodyMat, head: glassHeadMat, limb: glassLimbMat },
     };
+    // Her stil bir pbr seti tanimliyor; applyStyle ilk render'dan once calisip
+    // materyalleri guncel stile gore atiyor, buradaki set sadece baslangic degeri.
+    const initialMats = pbrMatSets[STYLES[active].pbr];
+
+    const body = new THREE.Mesh(geo, initialMats.body);
+    // Gövde her zaman sahnenin merkezinde; frustum culling kapatınca
+    // her frame computeBoundingSphere cagrisina gerek kalmiyor.
+    body.frustumCulled = false;
+    scene.add(body);
 
     const scaleBumpCanvas = document.createElement("canvas");
     scaleBumpCanvas.width = 256;
@@ -634,9 +637,6 @@ export default function Dragon() {
     scaleBumpTex.repeat.set(14, 2);
     scaleBumpTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
-    bodyMat.bumpMap = scaleBumpTex;
-    bodyMat.bumpScale = 1.6;
-    bodyMat.needsUpdate = true;
     goldBodyMat.bumpMap = scaleBumpTex;
     goldBodyMat.bumpScale = 1.4;
     goldBodyMat.needsUpdate = true;
@@ -705,24 +705,12 @@ export default function Dragon() {
     headGeo.setIndex(headIndices);
     headGeo.computeVertexNormals();
 
-    const headMat = new THREE.MeshPhongMaterial({
-      color: 0x141a22,
-      shininess: 12,
-      specular: 0x1a2030,
-      flatShading: true,
-      side: THREE.FrontSide,
-    });
-    const headMesh = new THREE.Mesh(headGeo, headMat);
+    const headMesh = new THREE.Mesh(headGeo, initialMats.head);
     headGroup.add(headMesh);
 
-    const hornMat = new THREE.MeshPhongMaterial({
-      color: 0x080a0e,
-      shininess: 6,
-      flatShading: true,
-    });
     const hornGeo = new THREE.ConeGeometry(3.5, 22, 6);
     function placeHorn(side) {
-      const horn = new THREE.Mesh(hornGeo, hornMat);
+      const horn = new THREE.Mesh(hornGeo, initialMats.limb);
       const baseX = side * 11;
       const baseY = 22;
       const baseZ = 20;
@@ -888,13 +876,6 @@ export default function Dragon() {
       p.sprite.visible = true;
     }
 
-    const objHeadMat = new THREE.MeshPhongMaterial({
-      color: 0x141a22,
-      shininess: 18,
-      specular: 0x232a36,
-      flatShading: false,
-      side: THREE.FrontSide,
-    });
     let objHeadWrap = null;
     let objHeadDisposed = false;
 
@@ -903,9 +884,7 @@ export default function Dragon() {
       "/lab/dragon/dragon.obj",
       (loaded) => {
         if (objHeadDisposed) return;
-        const curStyle = STYLES[activeRef.current];
-        const curPbr = curStyle?.pbr ? pbrMatSets[curStyle.pbr] : null;
-        const startMat = curPbr ? curPbr.head : objHeadMat;
+        const startMat = pbrMatSets[STYLES[activeRef.current].pbr].head;
         loaded.traverse((c) => {
           if (c.isMesh) {
             c.material = startMat;
@@ -996,9 +975,7 @@ export default function Dragon() {
           objLimbGeomsMirror.push(mirrorGeomX(sg));
         }
 
-        const curStyle = STYLES[activeRef.current];
-        const curPbr = curStyle?.pbr ? pbrMatSets[curStyle.pbr] : null;
-        const startMat = curPbr ? curPbr.limb : limbMat;
+        const startMat = pbrMatSets[STYLES[activeRef.current].pbr].limb;
 
         for (const leg of legData) {
           const wrap = new THREE.Group();
@@ -1049,10 +1026,10 @@ export default function Dragon() {
       side: THREE.DoubleSide,
     });
 
-    const cosA = new Float32Array(N_FACETS);
-    const sinA = new Float32Array(N_FACETS);
-    for (let k = 0; k < N_FACETS; k++) {
-      const a = (k / N_FACETS) * Math.PI * 2;
+    const cosA = new Float32Array(N_RING);
+    const sinA = new Float32Array(N_RING);
+    for (let k = 0; k < N_RING; k++) {
+      const a = ((k % N_FACETS) / N_FACETS) * Math.PI * 2;
       cosA[k] = Math.cos(a);
       sinA[k] = Math.sin(a);
     }
@@ -1127,56 +1104,33 @@ export default function Dragon() {
 
     const tmpColor = new THREE.Color();
     function applyStyle(s) {
-      bodyMat.color.setHex(s.body);
-      bodyMat.emissive.setHex(s.emissive);
-      bodyMat.emissiveIntensity = s.emissiveIntensity;
       dirLight.color.setHex(s.light);
       dirLight.intensity = s.lightIntensity;
       ambLight.color.setHex(s.ambient);
       ambLight.intensity = s.ambientIntensity;
       limbMat.color.setHex(s.limb);
-      headMat.color.setHex(s.body);
-      headMat.emissive.setHex(s.emissive);
-      headMat.emissiveIntensity = s.emissiveIntensity;
-      objHeadMat.color.setHex(s.body);
-      objHeadMat.emissive.setHex(s.emissive);
-      objHeadMat.emissiveIntensity = s.emissiveIntensity;
-      hornMat.color.setHex(s.limb);
       eyeMat.color.setHex(s.eye.color);
       eyeMat.emissive.setHex(s.eye.emissive);
       eyeMat.emissiveIntensity = s.eye.intensity;
       eyeHaloMat.color.setHex(s.eye.emissive);
       eyeHaloMat.opacity = s.eye.halo ?? 0.45;
-      const pbrSet = s.pbr ? pbrMatSets[s.pbr] : null;
-      if (pbrSet) {
-        body.material = pbrSet.body;
-        headMesh.material = pbrSet.head;
-        if (objHeadWrap) {
-          objHeadWrap.traverse((c) => {
-            if (c.isMesh) c.material = pbrSet.head;
-          });
-        }
-        leftHorn.material = pbrSet.limb;
-        rightHorn.material = pbrSet.limb;
-        for (const mesh of objLimbMeshes) {
-          mesh.material = pbrSet.limb;
-        }
-      } else {
-        body.material = bodyMat;
-        headMesh.material = headMat;
-        leftHorn.material = hornMat;
-        rightHorn.material = hornMat;
-        if (objHeadWrap) {
-          objHeadWrap.traverse((c) => {
-            if (c.isMesh) c.material = objHeadMat;
-          });
-        }
+      const pbrSet = pbrMatSets[s.pbr];
+      body.material = pbrSet.body;
+      headMesh.material = pbrSet.head;
+      if (objHeadWrap) {
+        objHeadWrap.traverse((c) => {
+          if (c.isMesh) c.material = pbrSet.head;
+        });
+      }
+      leftHorn.material = pbrSet.limb;
+      rightHorn.material = pbrSet.limb;
+      for (const mesh of objLimbMeshes) {
+        mesh.material = pbrSet.limb;
       }
       const bgTarget = container.parentElement || container;
       bgTarget.style.background = `linear-gradient(to bottom, ${s.bg[0]} 0%, ${s.bg[1]} 100%)`;
       const useManeFlame = !!s.maneFlame;
       for (const data of maneLayerData) {
-        data.mesh.visible = true;
         data.mesh.material = useManeFlame ? maneFireMat : data.mat;
         tmpColor.setHex(s.mane[data.layer.colorIdx]);
         const colArr = data.geom.attributes.color.array;
@@ -1213,9 +1167,21 @@ export default function Dragon() {
       }
       const style = STYLES[currentStyleId];
 
+      if (prevStepTime < 0) {
+        prevStepTime = now;
+        prevHeadX = segs[0].x;
+        prevHeadY = segs[0].y;
+        prevHeadZ = segs[0].z;
+      }
+      const dt = Math.min(0.1, (now - prevStepTime) / 1000);
+      prevStepTime = now;
+      // Lerp katsayilari 60 fps'e gore ayarlandi; frames ile carparak
+      // farkli kare hizlarinda ayni tepki suresini koruyoruz.
+      const frames = dt * 60;
+
       const sinceMouse = now - mouse.t;
       const wantIdle = sinceMouse > IDLE_DELAY || !mouse.inside;
-      idleBlend += (wantIdle ? 1 : -1) * 0.018;
+      idleBlend += (wantIdle ? 1 : -1) * 0.018 * frames;
       if (idleBlend < 0) idleBlend = 0;
       if (idleBlend > 1) idleBlend = 1;
 
@@ -1230,8 +1196,9 @@ export default function Dragon() {
       const ty = mouse.wy + (idleCy - mouse.wy) * idleBlend;
 
       const head = segs[0];
-      head.x += (tx - head.x) * HEAD_LERP;
-      head.y += (ty - head.y) * HEAD_LERP;
+      const headK = 1 - Math.pow(1 - HEAD_LERP, frames);
+      head.x += (tx - head.x) * headK;
+      head.y += (ty - head.y) * headK;
       head.z = Math.sin(now * 0.00095) * Z_AMP;
 
       for (let i = 1; i < N_SEGS; i++) {
@@ -1350,13 +1317,13 @@ export default function Dragon() {
         const s = segs[i];
         const t = i / (N_SEGS - 1);
         const r = radiusAt(t);
-        for (let k = 0; k < N_FACETS; k++) {
+        for (let k = 0; k < N_RING; k++) {
           const ck = cosA[k];
           const sk = sinA[k];
           const nx = ck * s.rx + sk * s.ux;
           const ny = ck * s.ry + sk * s.uy;
           const nz = ck * s.rz + sk * s.uz;
-          const idx = (i * N_FACETS + k) * 3;
+          const idx = (i * N_RING + k) * 3;
           pos[idx] = s.x + nx * r;
           pos[idx + 1] = s.y + ny * r;
           pos[idx + 2] = s.z + nz * r;
@@ -1540,15 +1507,6 @@ export default function Dragon() {
         maneFireMat.uniforms.uIntensity.value = Math.max(0.6, ff);
       }
 
-      if (prevStepTime < 0) {
-        prevStepTime = now;
-        prevHeadX = segs[0].x;
-        prevHeadY = segs[0].y;
-        prevHeadZ = segs[0].z;
-      }
-      const dt = Math.min(0.1, (now - prevStepTime) / 1000);
-      prevStepTime = now;
-
       {
         const h = segs[0];
         if (dt > 1e-4) {
@@ -1613,7 +1571,6 @@ export default function Dragon() {
       window.removeEventListener("touchmove", onTouch);
       window.removeEventListener("touchstart", onTouch);
       geo.dispose();
-      bodyMat.dispose();
       for (const data of maneLayerData) {
         data.geom.dispose();
         data.mat.dispose();
@@ -1624,9 +1581,7 @@ export default function Dragon() {
       for (const w of whiskerData) w.geom.dispose();
       limbMat.dispose();
       headGeo.dispose();
-      headMat.dispose();
       hornGeo.dispose();
-      hornMat.dispose();
       eyeGeo.dispose();
       eyeMat.dispose();
       eyeHaloTex.dispose();
@@ -1641,7 +1596,6 @@ export default function Dragon() {
           if (c.geometry) c.geometry.dispose();
         });
       }
-      objHeadMat.dispose();
       envDisposed = true;
       goldBodyMat.dispose();
       goldHeadMat.dispose();
