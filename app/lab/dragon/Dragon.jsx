@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const HEAD_PROFILES = [
   [-14, 10],
@@ -503,7 +504,6 @@ export default function Dragon() {
       color: 0x080a0e,
       shininess: 8,
       specular: 0x0a0c10,
-      flatShading: true,
       side: THREE.FrontSide,
     });
 
@@ -523,7 +523,6 @@ export default function Dragon() {
       color: 0xa07820,
       metalness: 1.0,
       roughness: 0.4,
-      flatShading: true,
       envMapIntensity: 1.0,
     });
 
@@ -543,7 +542,6 @@ export default function Dragon() {
       color: 0x0a0d12,
       metalness: 0.18,
       roughness: 0.55,
-      flatShading: true,
       envMapIntensity: 0.4,
     });
 
@@ -573,17 +571,18 @@ export default function Dragon() {
       clearcoatRoughness: 0.05,
       envMapIntensity: 1.4,
     });
-    // Kollar/bacaklar kafayla ayni renkte cam, ama ince olduklari icin
-    // kalinligi artirip attenuationDistance'i dusurerek kafa kadar koyu tint aliyorlar.
+    // Kollar/bacaklar govde/kafa ile ayni cam gorunumu icin ayni optik
+    // parametreleri kullaniyor. thickness govdeye (1.5) gore biraz yuksek
+    // tutuldu (masif hacim oldugu icin), geri kalan her sey esit.
     const glassLimbMat = new THREE.MeshPhysicalMaterial({
       color: 0xd0e4ec,
       metalness: 0.0,
       roughness: 0.05,
-      transmission: 0.82,
-      thickness: 12,
+      transmission: 0.95,
+      thickness: 3,
       ior: 1.5,
       attenuationColor: new THREE.Color(0x4a90a8),
-      attenuationDistance: 7,
+      attenuationDistance: 22,
       clearcoat: 1.0,
       clearcoatRoughness: 0.05,
       envMapIntensity: 1.4,
@@ -979,8 +978,15 @@ export default function Dragon() {
         const sourceGeoms = [];
         loaded.traverse((c) => {
           if (c.isMesh && c.geometry) {
-            c.geometry.computeVertexNormals();
-            sourceGeoms.push(c.geometry);
+            // OBJLoader indekssiz geometri uretir ve OBJ'de vn olmasa bile
+            // per-face (duz) bir normal attribute ekler. mergeVertices normalleri
+            // de hash'ledigi icin ayni pozisyondaki vertexleri kaynatmaz (4086->4033).
+            // Once normali silip pozisyona gore kaynatiyoruz (4086->731), sonra
+            // computeVertexNormals ile ortalanmis yumusak normaller uretiyoruz.
+            c.geometry.deleteAttribute("normal");
+            const smoothed = mergeVertices(c.geometry);
+            smoothed.computeVertexNormals();
+            sourceGeoms.push(smoothed);
           }
         });
         if (sourceGeoms.length === 0) return;
