@@ -12,6 +12,7 @@ export default function DragonPage() {
       <Link
         href="/lab"
         aria-label="Lab'a dön"
+        data-chrome
         className="fixed top-4 left-4 z-40 inline-flex items-center gap-2 px-3 py-2 rounded text-white/75 hover:text-white bg-white/5 hover:bg-white/15 border border-white/10 hover:border-white/25 backdrop-blur-sm transition text-[13px]"
       >
         <svg

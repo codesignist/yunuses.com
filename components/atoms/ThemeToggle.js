@@ -31,6 +31,7 @@ export default function ThemeToggle() {
       <button
         type="button"
         aria-label="Tema değiştir"
+        data-chrome
         className="fixed top-5 right-16 z-40 w-9 h-9 rounded-full cursor-pointer"
       />
     );
@@ -44,6 +45,7 @@ export default function ThemeToggle() {
       onClick={toggle}
       aria-label={isLight ? "Koyu temaya geç" : "Açık temaya geç"}
       title={isLight ? "Koyu temaya geç" : "Açık temaya geç"}
+      data-chrome
       className="fixed top-5 right-16 z-40 w-9 h-9 rounded-full cursor-pointer flex items-center justify-center text-faint hover:text-fg hover:bg-line-soft transition-colors"
     >
       {isLight ? (

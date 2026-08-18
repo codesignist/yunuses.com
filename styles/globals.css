@@ -202,3 +202,17 @@ html, body {
 
   * { box-sizing: border-box; }
 }
+
+/* Immersive deneylerde tum arayuz kromunu tek tusla gizlemek icin.
+   Eleman data-chrome ile isaretlenir, durum <html> uzerinde
+   data-chrome-hidden ile ilan edilir. Katman disinda birakildi ki
+   Tailwind'in transition-* yardimcilarini gecebilsin. */
+[data-chrome] {
+  transition: opacity 200ms ease, visibility 200ms ease;
+}
+
+[data-chrome-hidden] [data-chrome] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
