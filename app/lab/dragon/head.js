@@ -39,8 +39,8 @@ function buildTubeGeom(nRings, nFacets) {
       const b = i * nFacets + k2;
       const c = (i + 1) * nFacets + k2;
       const d = (i + 1) * nFacets + k;
-      indices[ii++] = a; indices[ii++] = b; indices[ii++] = c;
-      indices[ii++] = a; indices[ii++] = c; indices[ii++] = d;
+      indices[ii++] = a; indices[ii++] = c; indices[ii++] = b;
+      indices[ii++] = a; indices[ii++] = d; indices[ii++] = c;
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -324,7 +324,12 @@ export function createHead(scene, spine, styleRef) {
           c.material = styleRef.current.head;
           c.castShadow = false;
           c.receiveShadow = false;
-          if (c.geometry) c.geometry.computeVertexNormals();
+          // dragon.obj yumusak normallerle geliyor (31591 ucgen). OBJLoader
+          // indekssiz geometri urettigi icin computeVertexNormals cagrisi
+          // onlari per-face duz normallerle eziyordu, kafa fasetli cikiyordu.
+          if (c.geometry && !c.geometry.attributes.normal) {
+            c.geometry.computeVertexNormals();
+          }
         }
       });
       const box = new THREE.Box3().setFromObject(loaded);

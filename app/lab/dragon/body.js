@@ -57,15 +57,15 @@ export function createBody(scene, spine) {
       const b = i * N_RING + k + 1;
       const c = (i + 1) * N_RING + k + 1;
       const d = (i + 1) * N_RING + k;
-      indices[ii++] = a; indices[ii++] = b; indices[ii++] = c;
-      indices[ii++] = a; indices[ii++] = c; indices[ii++] = d;
+      indices[ii++] = a; indices[ii++] = c; indices[ii++] = b;
+      indices[ii++] = a; indices[ii++] = d; indices[ii++] = c;
     }
   }
   // Boyun kapagi. Kafa OBJ'si kaydigi anlarda tupun icine bakiliyordu.
   for (let k = 0; k < N_FACETS; k++) {
     indices[ii++] = CAP_INDEX;
-    indices[ii++] = k + 1;
     indices[ii++] = k;
+    indices[ii++] = k + 1;
   }
 
   const geo = new THREE.BufferGeometry();

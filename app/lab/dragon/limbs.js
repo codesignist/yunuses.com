@@ -9,6 +9,35 @@ const LIMB_SCALE = 0.78;
 const ATT_OUT = BODY_R * 0.52;
 const ATT_UP = BODY_R * 0.18;
 
+/**
+ * Isaretli hacim (diverjans teoremi). Negatif ise ucgen sarimi ice donuk,
+ * yani three geriye donuk yuzleri ayiklarken nesnenin arka duvarini
+ * gosteriyor ve computeVertexNormals ice bakan normal uretiyor.
+ */
+function signedVolume(geom) {
+  const pos = geom.attributes.position.array;
+  const idx = geom.index.array;
+  let v = 0;
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = idx[i] * 3, b = idx[i + 1] * 3, c = idx[i + 2] * 3;
+    v +=
+      pos[a] * (pos[b + 1] * pos[c + 2] - pos[b + 2] * pos[c + 1]) -
+      pos[a + 1] * (pos[b] * pos[c + 2] - pos[b + 2] * pos[c]) +
+      pos[a + 2] * (pos[b] * pos[c + 1] - pos[b + 1] * pos[c]);
+  }
+  return v / 6;
+}
+
+function flipWinding(geom) {
+  const idx = geom.index.array;
+  for (let i = 0; i < idx.length; i += 3) {
+    const t = idx[i];
+    idx[i] = idx[i + 2];
+    idx[i + 2] = t;
+  }
+  geom.index.needsUpdate = true;
+}
+
 function mirrorGeomX(src) {
   const g = src.clone();
   const a = g.attributes.position.array;
@@ -57,6 +86,9 @@ export function createLimbs(scene, spine, styleRef) {
           // pozisyona gore kaynatiyoruz, sonra yumusak normal uretiyoruz.
           c.geometry.deleteAttribute("normal");
           const smoothed = mergeVertices(c.geometry);
+          // limb.obj ice donuk sarimla gelmis: hacmi -27527. Duzeltilmeden
+          // normaller ice bakiyor ve uzuvlar ters yuz gorunuyor.
+          if (signedVolume(smoothed) < 0) flipWinding(smoothed);
           smoothed.computeVertexNormals();
           sources.push(smoothed);
         }
