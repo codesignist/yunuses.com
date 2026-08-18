@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {
   N_SEGS,
   HEAD_PROFILES,
@@ -315,18 +316,25 @@ export function createHead(scene, spine, styleRef) {
   // --- OBJ kafa ---
   let objWrap = null;
   let disposed = false;
-  new OBJLoader().load(
-    "/lab/dragon/dragon.obj",
-    (loaded) => {
+  // Kafa 3 MB'lik ham OBJ metniydi ve ana thread'de parse ediliyordu.
+  // meshopt ile sikistirilmis glb ayni geometriyi 285 KB'de tasiyor.
+  // Kuantize edilmis pozisyonlar (KHR_mesh_quantization) dugum donusumunde
+  // cozuluyor, asagidaki Box3 hesabi dunya uzayinda calistigi icin
+  // ortalama ve olcek mantigi degismeden duruyor.
+  const gltfLoader = new GLTFLoader();
+  gltfLoader.setMeshoptDecoder(MeshoptDecoder);
+  gltfLoader.load(
+    "/lab/dragon/dragon.glb",
+    (gltf) => {
       if (disposed) return;
+      const loaded = gltf.scene;
       loaded.traverse((c) => {
         if (c.isMesh) {
           c.material = styleRef.current.head;
           c.castShadow = false;
           c.receiveShadow = false;
-          // dragon.obj yumusak normallerle geliyor (31591 ucgen). OBJLoader
-          // indekssiz geometri urettigi icin computeVertexNormals cagrisi
-          // onlari per-face duz normallerle eziyordu, kafa fasetli cikiyordu.
+          // Yumusak normaller varlikta yazili; ustune hesaplarsak kafa
+          // fasetli cikiyor. Sadece eksikse hesapla.
           if (c.geometry && !c.geometry.attributes.normal) {
             c.geometry.computeVertexNormals();
           }
@@ -353,7 +361,7 @@ export function createHead(scene, spine, styleRef) {
       objWrap = wrap;
     },
     undefined,
-    (err) => console.warn("Dragon head OBJ load failed:", err),
+    (err) => console.warn("Dragon head GLB load failed:", err),
   );
 
   function setMaterials(set) {
