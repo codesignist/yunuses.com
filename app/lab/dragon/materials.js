@@ -150,8 +150,25 @@ export function createMaterialSets(renderer, lightDir) {
     const envMap = target.texture;
 
     const isGlass = !!style.glass;
+    const isWire = !!style.wireframe;
+
+    // Tel kafeste isiklandirma anlamsiz: cizgilerin kendisi okunuyor.
+    // depthWrite kapali, yani x-ray gorunum; ust uste binen katmanlar
+    // birbirini gosteriyor. Eklemeli karisim denendi ama kivrimlarin
+    // ust uste geldigi yerde toplam 1.0'i asip beyaza doyuyor ve bloom
+    // bunu tum kareye yayiyordu; normal karisimda cizgi rengini koruyor.
+    const makeWire = (cfg) =>
+      new THREE.MeshBasicMaterial({
+        color: cfg.color ?? 0x7fe6ff,
+        wireframe: true,
+        transparent: true,
+        opacity: cfg.opacity ?? 0.3,
+        depthWrite: false,
+      });
+
     const make = (part) => {
       const cfg = style[part] ?? {};
+      if (isWire) return makeWire(cfg);
       if (isGlass) {
         const g = style.glass;
         return new THREE.MeshPhysicalMaterial({
@@ -182,22 +199,28 @@ export function createMaterialSets(renderer, lightDir) {
     const head = make("head");
     const limb = make("limb");
 
-    // Pul kabartmasi artik uc stilde de, hem govdede hem kafada.
-    body.bumpMap = bodyBump;
-    body.bumpScale = style.bumpScale;
-    head.bumpMap = headBump;
-    head.bumpScale = style.bumpScale * 0.6;
+    // Pul kabartmasi uc yuzeysel stilde de, hem govdede hem kafada.
+    // MeshBasicMaterial bump desteklemedigi icin tel kafeste atlaniyor.
+    if (!isWire) {
+      body.bumpMap = bodyBump;
+      body.bumpScale = style.bumpScale;
+      head.bumpMap = headBump;
+      head.bumpScale = style.bumpScale * 0.6;
+    }
 
     const crestCfg = style.crest;
-    const crest = new THREE.MeshStandardMaterial({
-      color: crestCfg.color,
-      metalness: crestCfg.metalness,
-      roughness: crestCfg.roughness,
-      envMap,
-      envMapIntensity: isGlass ? 1.2 : (style.body.envMapIntensity ?? 1),
-      side: THREE.DoubleSide,
-      flatShading: true,
-    });
+    const crest = isWire
+      ? makeWire(crestCfg)
+      : new THREE.MeshStandardMaterial({
+          color: crestCfg.color,
+          metalness: crestCfg.metalness,
+          roughness: crestCfg.roughness,
+          envMap,
+          envMapIntensity: isGlass ? 1.2 : (style.body.envMapIntensity ?? 1),
+          side: THREE.DoubleSide,
+          flatShading: true,
+        });
+    if (isWire) crest.side = THREE.DoubleSide;
 
     sets[id] = { body, head, limb, crest, envMap };
   }

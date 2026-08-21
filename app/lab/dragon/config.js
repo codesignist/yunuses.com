@@ -166,6 +166,34 @@ export const STYLES = {
     bumpScale: 0.9,
     bloom: { strength: 0.62, radius: 0.5, threshold: 0.55 },
   },
+  telkafes: {
+    label: "Tel Kafes",
+    // Isiksiz malzeme kullaniliyor, isik degerleri sadece gozler icin duruyor.
+    wireframe: true,
+    light: 0xeaf6ff,
+    lightIntensity: 0.6,
+    ambient: 0x101820,
+    ambientIntensity: 0.3,
+    sky: ["#04080f", "#010305"],
+    moonTint: 0x8fb4d4,
+    moonGain: 1.0,
+    mane: [0x3fc8f0, 0x6fdcff, 0xa8eeff],
+    maneFlame: false,
+    eye: { color: 0xffffff, emissive: 0x7fe6ff, intensity: 3.2, halo: 0.3 },
+    // Cizgiler eklemeli karisiyor, yani ust uste binen katmanlar parlıyor.
+    // Opaklik parca basina ayri: kafa 31592 ucgen, govdeyle ayni degeri
+    // alirsa yogunluktan beyaz bir lekeye donuyor.
+    body: { color: 0x5fe0ff, opacity: 0.5 },
+    head: { color: 0x9beeff, opacity: 0.05 },
+    limb: { color: 0x7fe6ff, opacity: 0.55 },
+    crest: { color: 0xbdf2ff, opacity: 0.6 },
+    maneOpacity: 0.32,
+    // Yeleyi soldurmak yerine seyreltiyoruz: 1230 dikenin hepsi cizilince
+    // ayri ayri teller degil tek bir beyaz kutle okunuyor.
+    maneFraction: 0.3,
+    bumpScale: 0,
+    bloom: { strength: 0.24, radius: 0.45, threshold: 0.85 },
+  },
 };
 
 export const STYLE_IDS = Object.keys(STYLES);

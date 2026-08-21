@@ -165,12 +165,29 @@ export function createMane(scene, spine) {
     side: THREE.DoubleSide,
   });
 
+  // Yele katmanlari tek bir tel kafes malzemesini paylasiyor: her diken
+  // dort ucgen, uc katman toplaminda 1230 diken. Katman basina ayri
+  // malzeme tutmanin gorsel karsiligi yok, rengi stilden aliyoruz.
+  const wireMat = new THREE.MeshBasicMaterial({
+    color: 0x6fdcff,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.22,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
   const tmpColor = new THREE.Color();
 
   function applyStyle(style) {
     const useFlame = !!style.maneFlame;
+    const useWire = !!style.wireframe;
+    if (useWire) {
+      wireMat.color.setHex(style.mane[1]);
+      wireMat.opacity = style.maneOpacity ?? 0.22;
+    }
     for (const data of layers) {
-      data.mesh.material = useFlame ? fireMat : data.mat;
+      data.mesh.material = useFlame ? fireMat : useWire ? wireMat : data.mat;
       tmpColor.setHex(style.mane[data.layer.colorIdx]);
       const arr = data.geom.attributes.color.array;
       for (let v = 0; v < data.layer.count * 4; v++) {
@@ -182,7 +199,11 @@ export function createMane(scene, spine) {
       data.geom.attributes.color.needsUpdate = true;
       // Kullanilmayan teller onceden sifirlaniyor ama index buffer'dan
       // cikmadigi icin origin'de dejenere ucgen olarak ciziliyordu.
-      data.geom.setDrawRange(0, data.layer.count * 12);
+      // Teller baseT'ye gore rastgele dagildigi icin bastan bir dilim almak
+      // yeleyi duzgun seyreltiyor.
+      const frac = style.maneFraction ?? 1;
+      const drawn = Math.max(1, Math.floor(data.layer.count * frac));
+      data.geom.setDrawRange(0, drawn * 12);
     }
   }
 
@@ -274,6 +295,7 @@ export function createMane(scene, spine) {
       data.mat.dispose();
     }
     fireMat.dispose();
+    wireMat.dispose();
   }
 
   return { applyStyle, update, dispose };
