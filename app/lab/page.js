@@ -1,8 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
-import experiments from "data/lab.json";
+import ExperimentCover from "components/atoms/ExperimentCover";
+import { getExperiments, stampDate } from "lib/experiments";
 import { SITE_URL } from "lib/identity";
 import { jsonLd } from "lib/jsonLd";
+
+const experiments = getExperiments();
 
 const description =
   "Eski ve yeni deneysel çalışmalar. Flash döneminden bugüne kalan minik prototipler, oyunlar ve görsel denemeler.";
@@ -57,40 +59,29 @@ export default function LabIndex() {
           </p>
         </header>
 
-        <ul className="space-y-12">
+        <ul className="space-y-20 max-md:space-y-16">
           {experiments.map((item, i) => (
             <li
               key={item.slug}
               className="animate-fade-in-up"
               style={{ animationDelay: `${100 + i * 80}ms` }}
             >
-              <Link
-                href={`/lab/${item.slug}`}
-                className="group flex items-start gap-5 max-md:gap-4"
-              >
-                <div className="shrink-0 w-24 h-24 max-md:w-20 max-md:h-20 rounded-lg overflow-hidden border border-line bg-surface relative">
-                  {item.cover ? (
-                    <Image
-                      src={item.cover}
-                      alt=""
-                      fill
-                      sizes="(max-width: 768px) 80px, 96px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-0 flex items-center justify-center text-3xl text-faint select-none"
-                    >
-                      {item.title?.trim().charAt(0).toUpperCase() || "·"}
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl font-medium tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors max-md:text-xl">
+              <Link href={`/lab/${item.slug}`} className="group block">
+                {item.cover && (
+                  <ExperimentCover
+                    src={item.cover}
+                    sizes="(max-width: 768px) 100vw, 680px"
+                  />
+                )}
+                <div className={item.cover ? "mt-4" : ""}>
+                  <div className="font-mono text-[12px] text-faint">
+                    {stampDate(item.date)}
+                    <span className="mx-2 text-line">·</span>
+                    {item.tag}
+                  </div>
+                  <h2 className="mt-2 text-2xl font-medium tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors max-md:text-xl">
                     {item.title}
                   </h2>
-                  <div className="mt-1 text-[13px] text-faint">{item.tag}</div>
                   <p className="mt-3 text-[15px] leading-[1.7] text-muted">
                     {item.description}
                   </p>

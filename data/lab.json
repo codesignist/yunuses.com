@@ -4,27 +4,31 @@
     "title": "Dragon",
     "tag": "Görsel",
     "date": "2026-05-26",
-    "description": "Çince ejderha esintili uzun bir yılan. Mouse'u takip eder, hareketsiz kalırsan kendi başına dolanmaya başlar. Saf Canvas 2D, omurga zinciri ve elden sahte derinlikle çizilmiş."
+    "description": "Çince ejderha esintili uzun bir yılan. Mouse'u takip eder, hareketsiz kalırsan kendi başına dolanmaya başlar. Gölge, Altın, Buz ve Çizim olmak üzere dört ayrı görünümü var.",
+    "cover": "/lab/covers/dragon.webp"
   },
   {
     "slug": "attractors",
     "title": "Attractors",
     "tag": "Görsel",
     "date": "2026-05-25",
-    "description": "Lorenz, Aizawa, Halvorsen, Thomas garip çekicileri. Tek bir denklem 200 bin adımda kelebek ve çiçek formları çıkarıyor. Saf Canvas 2D, etkileşimli."
+    "description": "Lorenz, Aizawa, Halvorsen, Thomas garip çekicileri. Tek bir denklem 200 bin adımda kelebek ve çiçek formları çıkarıyor. Saf Canvas 2D, etkileşimli.",
+    "cover": "/lab/covers/attractors.webp"
   },
   {
     "slug": "flow",
     "title": "Flow",
     "tag": "Görsel",
     "date": "2026-05-10",
-    "description": "WebGL2 üzerine yazılmış minimal bir akışkan simülasyonu. Tayf, Lav, Buz ve Kaos olmak üzere dört farklı renk modu var. Mouse veya dokunmatikle çalışır."
+    "description": "WebGL2 üzerine yazılmış minimal bir akışkan simülasyonu. Tayf, Lav, Buz ve Kaos olmak üzere dört farklı renk modu var. Mouse veya dokunmatikle çalışır.",
+    "cover": "/lab/covers/flow.webp"
   },
   {
     "slug": "3d-ping-pong",
     "title": "3D Ping Pong",
     "tag": "Oyun",
     "date": "2026-05-01",
-    "description": "Flash döneminden kalma 3D ping pong oyununun Canvas 2D üzerine yazılmış yeniden yorumu. Engine yok, perspektif elden hesaplanmış. Mouse ile oynanır."
+    "description": "Flash döneminden kalma 3D ping pong oyununun Canvas 2D üzerine yazılmış yeniden yorumu. Engine yok, perspektif elden hesaplanmış. Mouse ile oynanır.",
+    "cover": "/lab/covers/3d-ping-pong.webp"
   }
 ]

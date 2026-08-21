@@ -1,5 +1,7 @@
 import AvatarLink from "components/atoms/AvatarLink";
 import SocialAnchor from "components/atoms/SocialAnchor";
+import ExperimentCover from "components/atoms/ExperimentCover";
+import { getLatestExperiment, stampDate } from "lib/experiments";
 import { formatDate, getAllPosts } from "lib/posts";
 import { PERSON } from "lib/identity";
 import { jsonLd } from "lib/jsonLd";
@@ -20,6 +22,7 @@ const personSchema = {
 
 export default function Home() {
   const latestPost = getAllPosts()[0];
+  const latestExperiment = getLatestExperiment();
 
   return (
     <main id="main" className="flex-1 flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
@@ -123,6 +126,43 @@ export default function Home() {
           </div>
         )}
 
+        {latestExperiment && (
+          <div
+            className="mt-12 pt-8 border-t border-line animate-fade-in-up"
+            style={{ animationDelay: "400ms" }}
+          >
+            <div className="text-[12px] text-faint uppercase tracking-[0.08em] mb-4">
+              Son deney
+            </div>
+            {/* Blogun aksine deneyin anlatacagi seyi gorselin kendisi
+                anlatiyor; burada ozet yok, kapak ve ad yetiyor. */}
+            <Link href={`/lab/${latestExperiment.slug}`} className="group block">
+              {latestExperiment.cover && (
+                <ExperimentCover
+                  src={latestExperiment.cover}
+                  sizes="(max-width: 768px) 100vw, 560px"
+                />
+              )}
+              <div className={latestExperiment.cover ? "mt-4" : ""}>
+                <h2 className="text-xl font-medium tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors">
+                  {latestExperiment.title}
+                </h2>
+                <div className="mt-2 font-mono text-[12px] text-faint">
+                  {stampDate(latestExperiment.date)}
+                  <span className="mx-2 text-line">·</span>
+                  {latestExperiment.tag}
+                </div>
+              </div>
+            </Link>
+            <Link
+              href="/lab"
+              className="inline-flex items-center gap-1.5 mt-5 text-[14px] text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+            >
+              Tüm deneyler
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        )}
       </div>
     </main>
   );
