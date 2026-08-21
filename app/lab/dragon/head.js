@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {
   N_SEGS,
   HEAD_PROFILES,
@@ -317,12 +316,17 @@ export function createHead(scene, spine, styleRef) {
   let objWrap = null;
   let disposed = false;
   // Kafa 3 MB'lik ham OBJ metniydi ve ana thread'de parse ediliyordu.
-  // meshopt ile sikistirilmis glb ayni geometriyi 285 KB'de tasiyor.
+  // Kuantize edilmis glb ayni geometriyi 677 KB'de tasiyor.
+  //
+  // meshopt sikistirmasi 285 KB'ye kadar indiriyordu ama cozucusu WASM ve
+  // sitenin prodüksiyon CSP'si 'unsafe-eval' vermiyor, yani WebAssembly
+  // derlenemiyor ve kafa hic yuklenmiyordu. Dev'de CSP'ye 'unsafe-eval'
+  // eklendigi icin lokalde sorunsuz calisiyordu. Sikistirma yerine sadece
+  // kuantizasyon kullaniyoruz: hicbir calisma zamani cozucusu gerekmiyor.
   // Kuantize edilmis pozisyonlar (KHR_mesh_quantization) dugum donusumunde
   // cozuluyor, asagidaki Box3 hesabi dunya uzayinda calistigi icin
   // ortalama ve olcek mantigi degismeden duruyor.
   const gltfLoader = new GLTFLoader();
-  gltfLoader.setMeshoptDecoder(MeshoptDecoder);
   gltfLoader.load(
     "/lab/dragon/dragon.glb",
     (gltf) => {
