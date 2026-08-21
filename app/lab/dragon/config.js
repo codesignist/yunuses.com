@@ -132,8 +132,8 @@ export const STYLES = {
     bumpScale: 1.2,
     bloom: { strength: 0.34, radius: 0.42, threshold: 0.78 },
   },
-  cam: {
-    label: "Cam",
+  buz: {
+    label: "Buz",
     light: 0xeaf6ff,
     lightIntensity: 1.35,
     ambient: 0x1a2a3a,
@@ -166,8 +166,8 @@ export const STYLES = {
     bumpScale: 0.9,
     bloom: { strength: 0.62, radius: 0.5, threshold: 0.55 },
   },
-  telkafes: {
-    label: "Tel Kafes",
+  cizim: {
+    label: "Çizim",
     // Isiksiz malzeme kullaniliyor, isik degerleri sadece gozler icin duruyor.
     wireframe: true,
     light: 0xeaf6ff,
@@ -177,17 +177,24 @@ export const STYLES = {
     sky: ["#04080f", "#010305"],
     moonTint: 0x8fb4d4,
     moonGain: 1.0,
-    mane: [0x3fc8f0, 0x6fdcff, 0xa8eeff],
+    mane: [0x6b757c, 0x828d94, 0x9aa5ac],
     maneFlame: false,
+    // Goz kureleri bu stilde kapali. Tel kafes olarak cizilseler 24x18
+    // bolumlu kure on plandaki ~10 pikselde yine dolu bir yumak olurdu;
+    // ustelik kafa OBJ'sinin kendi goz cukuru zaten modelli.
+    hideEyes: true,
     eye: { color: 0xffffff, emissive: 0x7fe6ff, intensity: 3.2, halo: 0.3 },
     // Cizgiler eklemeli karisiyor, yani ust uste binen katmanlar parlıyor.
     // Opaklik parca basina ayri: kafa 31592 ucgen, govdeyle ayni degeri
     // alirsa yogunluktan beyaz bir lekeye donuyor.
-    body: { color: 0x5fe0ff, opacity: 0.5 },
-    head: { color: 0x9beeff, opacity: 0.05 },
-    limb: { color: 0x7fe6ff, opacity: 0.55 },
-    crest: { color: 0xbdf2ff, opacity: 0.6 },
-    maneOpacity: 0.32,
+    // WebGL'de tel kafes cizgisi her zaman bir aygit pikseli; lineWidth
+    // ANGLE tarafinda yok sayiliyor. "Daha ince" bu yuzden opaklik ve
+    // doygunlukla yapiliyor.
+    body: { color: 0x8f9aa2, opacity: 0.22 },
+    head: { color: 0xa8b2b8, opacity: 0.03 },
+    limb: { color: 0x8f9aa2, opacity: 0.26 },
+    crest: { color: 0xa0aab0, opacity: 0.3 },
+    maneOpacity: 0.15,
     // Yeleyi soldurmak yerine seyreltiyoruz: 1230 dikenin hepsi cizilince
     // ayri ayri teller degil tek bir beyaz kutle okunuyor.
     maneFraction: 0.3,

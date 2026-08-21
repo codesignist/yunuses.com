@@ -377,6 +377,9 @@ export function createHead(scene, spine, styleRef) {
   }
 
   function applyStyle(style) {
+    const showEyes = !style.hideEyes;
+    for (const e of eyes) e.visible = showEyes;
+    for (const h of halos) h.visible = showEyes;
     eyeMat.emissive.setHex(style.eye.emissive);
     eyeMat.emissiveIntensity = style.eye.intensity;
     eyeMat.color.setHex(style.eye.color);
