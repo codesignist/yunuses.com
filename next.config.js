@@ -43,6 +43,24 @@ const securityHeaders = [
   },
 ];
 
+// RFC 8288 Link header'ı: sayfayı HTML olarak parse etmeden, sadece response
+// header'ına bakan ajanlara sitenin makine tarafından okunabilir uçlarını
+// duyurur. Değerler IANA'da kayıtlı rel tipleri; başlıklar ASCII, çünkü
+// header değerlerinde Türkçe karakter taşımak riskli.
+const agentDiscoveryLinks = [
+  '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
+  '</feed.xml>; rel="alternate"; type="application/rss+xml"; title="Blog (RSS)"',
+  '</feed.json>; rel="alternate"; type="application/feed+json"; title="Blog (JSON Feed)"',
+  '</sitemap.xml>; rel="describedby"; type="application/xml"; title="Sitemap"',
+];
+
+const agentDiscoveryHeaders = [
+  {
+    key: "Link",
+    value: agentDiscoveryLinks.join(", "),
+  },
+];
+
 module.exports = {
   reactStrictMode: true,
   trailingSlash: true,
@@ -52,6 +70,16 @@ module.exports = {
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      // Sadece sayfalara: trailingSlash açık olduğu için HTML rotaları "/" ile
+      // biter, statik dosyalar bitmez. Link header'ını asset'lere taşımıyoruz.
+      {
+        source: "/",
+        headers: agentDiscoveryHeaders,
+      },
+      {
+        source: "/:path+/",
+        headers: agentDiscoveryHeaders,
       },
     ];
   },
