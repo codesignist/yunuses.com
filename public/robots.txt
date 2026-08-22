@@ -1,4 +1,11 @@
+# Content Signals (contentsignals.org): içeriğin nasıl kullanılmasını
+# istediğimizin beyanıdır, teknik bir engel değil. Uyması tarayıcıya kalmış.
+#   search   = arama dizinine alıp bağlantı ve kısa alıntı göstermek
+#   ai-input = yapay zeka modeline anlık girdi vermek (cevap üretimi, özetleme)
+#   ai-train = model eğitmek ya da ince ayar yapmak
+
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no
 Allow: /
 
 Sitemap: https://yunuses.com/sitemap.xml
