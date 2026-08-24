@@ -3,7 +3,7 @@ import { PATH_HEADER, wantsMarkdown } from "lib/markdownNegotiation";
 
 // Ajan text/markdown isterse sayfanin markdown karsiligini donuyoruz.
 // Tarayicilar Accept'te text/html gonderdigi icin varsayilan HTML kaliyor.
-export function middleware(request) {
+export function proxy(request) {
   const negotiated = wantsMarkdown({
     method: request.method,
     pathname: request.nextUrl.pathname,

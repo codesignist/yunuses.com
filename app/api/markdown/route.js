@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 // kendi markdown cevirisi acilirsa dongu riski var.
 const LOCAL_ORIGIN = `http://127.0.0.1:${process.env.PORT ?? 3000}`;
 
-// Ucu middleware cagiriyor ama adres disaridan da erisilebilir. Yolu site
-// icine kilitliyoruz, yoksa elimizde acik bir proxy kalir.
+// Ucu proxy.js cagiriyor ama adres disaridan da erisilebilir. Yolu site
+// icine kilitliyoruz, yoksa elimizde herkese acik bir yonlendirici kalir.
 function isSafePath(path) {
   return (
     path.startsWith("/") &&
