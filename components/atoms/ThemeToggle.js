@@ -32,7 +32,7 @@ export default function ThemeToggle() {
         type="button"
         aria-label="Tema değiştir"
         data-chrome
-        className="fixed top-5 right-16 z-40 w-9 h-9 rounded-full cursor-pointer"
+        className="w-9 h-9 shrink-0 rounded-full cursor-pointer"
       />
     );
   }
@@ -46,7 +46,7 @@ export default function ThemeToggle() {
       aria-label={isLight ? "Koyu temaya geç" : "Açık temaya geç"}
       title={isLight ? "Koyu temaya geç" : "Açık temaya geç"}
       data-chrome
-      className="fixed top-5 right-16 z-40 w-9 h-9 rounded-full cursor-pointer flex items-center justify-center text-faint hover:text-fg hover:bg-line-soft transition-colors"
+      className="w-9 h-9 shrink-0 rounded-full cursor-pointer flex items-center justify-center text-faint hover:text-fg hover:bg-line-soft transition-colors"
     >
       {isLight ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -33,7 +33,7 @@ export default function SharePost({ title }) {
       type="button"
       onClick={handleShare}
       aria-label="Yazıyı paylaş"
-      className="inline-flex items-center gap-2 text-[13px] text-faint hover:text-fg cursor-pointer transition-colors"
+      className="link-quiet inline-flex items-center gap-2 text-meta cursor-pointer"
     >
       <svg
         width="14"

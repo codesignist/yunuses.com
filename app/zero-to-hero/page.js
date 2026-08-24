@@ -1,5 +1,5 @@
 import Icon from "components/atoms/Icon";
-import LinkButton from "components/atoms/LinkButton";
+import BackLink from "components/atoms/BackLink";
 import LessonsMap from "./LessonsMap";
 import lessons from "data/lessons.json";
 import types from "data/types.json";
@@ -101,24 +101,22 @@ const faq = [
 
 export default function ZeroToHero() {
   return (
-    <main id="main" className="flex-1 px-6 py-16 max-md:py-12 max-md:px-5 animate-fade-in">
+    <main id="main" className="flex-1 page-shell animate-fade-in">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(courseSchema) }}
       />
-      <div className="mx-auto max-w-[680px]">
-        <LinkButton icon="chevron-left" href="/">
-          Ana sayfa
-        </LinkButton>
+      <div className="mx-auto max-w-reading">
+        <BackLink href="/">Anasayfa</BackLink>
 
         <div className="mt-12">
-          <div className="text-[15px] text-muted font-light">Zero to Hero</div>
+          <div className="eyebrow">Zero to Hero</div>
           <h1 className="mt-1 text-6xl font-semibold tracking-tight text-fg leading-[1.05] max-md:text-5xl max-[425px]:text-[14vw]">
             FrontEnd
             <br />
             Developer
           </h1>
-          <div className="mt-4 flex items-center gap-3 text-[13px] text-muted">
+          <div className="mt-4 flex items-center gap-3 text-meta text-muted">
             <span className="inline-flex items-center gap-1.5 text-fg">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--color-type-common)]" />
               Tamamlandı
@@ -129,14 +127,14 @@ export default function ZeroToHero() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1080px] mt-20">
-        <div className="text-[13px] text-faint mb-5 px-1">Ders Haritası</div>
+      <div className="mx-auto max-w-wide mt-20">
+        <div className="eyebrow mb-5 px-1">Ders Haritası</div>
         <LessonsMap lessons={lessons} types={types} />
       </div>
 
-      <div className="mx-auto max-w-[680px]">
+      <div className="mx-auto max-w-reading">
         <H2>Tanıtım</H2>
-        <div className="space-y-5 text-[15px] leading-[1.7] text-muted">
+        <div className="space-y-5 text-body text-muted">
           <p>
             En temel bilgisayar kullanımından başlayıp gelişmiş web sistemleri
             yapacak seviyeye uygulamalı olarak birlikte çıktık. HTML, CSS, JS
@@ -158,7 +156,7 @@ export default function ZeroToHero() {
         </div>
 
         <H2>Giriş</H2>
-        <div className="space-y-5 text-[15px] leading-[1.7] text-muted">
+        <div className="space-y-5 text-body text-muted">
           <p>
             Hızla gelişen dünyada yazılımcı ihtiyacı her geçen gün artıyordu.
             Şirketler iyi yetişmiş eleman bulamamaktan şikayetçiyken; çalışanlar
@@ -177,7 +175,7 @@ export default function ZeroToHero() {
         </div>
 
         <H2>Amaç</H2>
-        <p className="text-[15px] leading-[1.7] text-muted">
+        <p className="text-body text-muted">
           Temel bilgisayar kullanım bilgisi olan bir katılımcıyı önce FrontEnd
           dünyasına katıp; sonrasında oyun geliştirici, mobil geliştirici,
           gömülü sistem geliştirici gibi alanlara yönlendirerek yazılım
@@ -185,7 +183,7 @@ export default function ZeroToHero() {
         </p>
 
         <H2>Eğitim Hakkında</H2>
-        <div className="space-y-5 text-[15px] leading-[1.7] text-muted">
+        <div className="space-y-5 text-body text-muted">
           <p>
             Dersler önceden belirlenmiş öğrencilere uygulamalı anlatımla
             işlendi; YouTube canlı yayını üzerinden de diğer katılımcıların
@@ -196,7 +194,7 @@ export default function ZeroToHero() {
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
           <a
-            className="inline-flex items-center gap-2 px-3 py-2 border border-line text-[13px] text-fg hover:border-faint transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 border border-line text-meta text-fg hover:border-faint transition-colors"
             href="https://www.youtube.com/yunuses"
             target="_blank"
           >
@@ -204,7 +202,7 @@ export default function ZeroToHero() {
             <span>youtube.com/yunuses</span>
           </a>
           <a
-            className="inline-flex items-center gap-2 px-3 py-2 border border-line text-[13px] text-fg hover:border-faint transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 border border-line text-meta text-fg hover:border-faint transition-colors"
             href="https://discord.gg/N72tKgSVV3"
             target="_blank"
           >
@@ -212,7 +210,7 @@ export default function ZeroToHero() {
             <span>discord.com</span>
           </a>
         </div>
-        <div className="mt-6 space-y-5 text-[15px] leading-[1.7] text-muted">
+        <div className="mt-6 space-y-5 text-body text-muted">
           <p>
             Dersler 1 Ağustos 2022&apos;de başladı; Pazartesi - Perşembe saat{" "}
             <span className="text-fg">22:00</span>&apos;de düzenli olarak
@@ -226,11 +224,11 @@ export default function ZeroToHero() {
         </div>
 
         <H2>Teknolojiler</H2>
-        <p className="text-[15px] leading-[1.7] text-muted">
+        <p className="text-body text-muted">
           Eğitim boyunca işlenen konular, teknolojiler ve npm paketlerinin bir
           kısmı:
         </p>
-        <div className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-[13px] text-muted">
+        <div className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-meta text-muted">
           {technologies.map((item, i) => (
             <span key={item} className="flex items-center gap-3">
               <span>{item}</span>
@@ -242,16 +240,16 @@ export default function ZeroToHero() {
         </div>
 
         <H2>Kazanımlar</H2>
-        <p className="text-[15px] leading-[1.7] text-muted">
+        <p className="text-body text-muted">
           Programı tamamlayan katılımcıların elde ettiği kazanımlar:
         </p>
         <ul className="mt-5 list-none p-0">
           {achievements.map((achieve, i) => (
             <li
               key={achieve}
-              className="flex items-baseline gap-4 py-3 border-t border-line last:border-b text-[14px]"
+              className="flex items-baseline gap-4 py-3 border-t border-line last:border-b text-ui"
             >
-              <span className="text-faint font-mono text-[12px] w-6 shrink-0">
+              <span className="text-faint font-mono text-label w-6 shrink-0">
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span className="text-fg">{achieve}</span>
@@ -267,12 +265,12 @@ export default function ZeroToHero() {
               className="group border-t border-line last:border-b"
             >
               <summary className="cursor-pointer py-4 flex items-center justify-between gap-4 select-none list-none [&::-webkit-details-marker]:hidden">
-                <span className="text-[14px] text-fg">{q}</span>
+                <span className="text-ui text-fg">{q}</span>
                 <span className="text-faint text-lg leading-none transition-transform duration-200 group-open:rotate-45 shrink-0">
                   +
                 </span>
               </summary>
-              <div className="pb-4 pr-8 text-[14px] leading-[1.7] text-muted">
+              <div className="pb-4 pr-8 text-ui text-muted">
                 {a}
               </div>
             </details>

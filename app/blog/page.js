@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import BackLink from "components/atoms/BackLink";
 import { formatDate, getAllPosts } from "lib/posts";
 import { FEED_TYPES } from "lib/metadata";
 
@@ -19,19 +20,14 @@ export default function BlogIndex() {
   const posts = getAllPosts();
 
   return (
-    <main id="main" className="flex-1 px-6 py-20 max-md:py-12 max-md:px-5">
-      <div className="w-full max-w-[680px] mx-auto">
+    <main id="main" className="flex-1 page-shell">
+      <div className="w-full max-w-reading mx-auto">
         <header className="mb-16 max-md:mb-12 animate-fade-in-up">
-          <Link
-            href="/"
-            className="text-[13px] text-faint hover:text-fg transition-colors"
-          >
-            ← Anasayfa
-          </Link>
+          <BackLink href="/">Anasayfa</BackLink>
           <h1 className="font-blog-serif mt-6 text-4xl font-semibold tracking-tight text-fg leading-tight max-md:text-3xl">
             Blog
           </h1>
-          <p className="font-blog-serif mt-3 text-[15px] leading-[1.7] text-muted italic">
+          <p className="font-blog-serif mt-3 text-body text-muted italic">
             Yazılım, ürün ve süreç üzerine notlar.
           </p>
         </header>
@@ -69,16 +65,16 @@ export default function BlogIndex() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="font-blog-serif text-2xl font-semibold tracking-tight text-fg leading-snug group-hover:text-fg/90 transition-colors max-md:text-xl">
+                    <h2 className="font-blog-serif text-2xl font-semibold tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors max-md:text-xl">
                       {post.title}
                     </h2>
-                    <div className="mt-1 flex items-baseline gap-3 text-[13px] text-faint">
+                    <div className="mt-1 flex items-baseline gap-3 text-meta text-faint">
                       <time dateTime={post.date}>{formatDate(post.date)}</time>
                       <span className="text-line">·</span>
                       <span>{post.readingTime} dk okuma</span>
                     </div>
                     {post.summary && (
-                      <p className="font-blog-serif mt-3 text-[15px] leading-[1.7] text-muted">
+                      <p className="font-blog-serif mt-3 text-body text-muted">
                         {post.summary}
                       </p>
                     )}

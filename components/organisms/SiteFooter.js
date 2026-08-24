@@ -14,11 +14,12 @@ const SOCIAL_DATA = {
   instagram: "https://www.instagram.com/codesignist",
 };
 
-// Sayfa-bazlı içerik genişliğini eşleştir — Footer her sayfanın hizasıyla
-// aynı genişlikte hizalansın.
+// Footer her sayfanın içerik sütunuyla aynı hizada bitsin. Ölçüler
+// globals.css'teki --container-* tokenlarından geliyor; burada sadece
+// hangi sayfanın hangisini kullandığı yazılı.
 function maxWidthFor(pathname) {
-  if (!pathname || pathname === "/") return "max-w-[560px]";
-  return "max-w-[680px]";
+  if (!pathname || pathname === "/") return "max-w-intro";
+  return "max-w-reading";
 }
 
 export default function SiteFooter() {
@@ -36,22 +37,17 @@ export default function SiteFooter() {
     <footer className="border-t border-line px-6 max-md:px-5 py-8">
       <div className={`mx-auto ${maxWidthFor(pathname)}`}>
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-[13px] text-faint">
-            <Link href="/" className="hover:text-fg transition-colors">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-meta">
+            <Link href="/" className="link-quiet">
               Anasayfa
             </Link>
-            <Link href="/blog" className="hover:text-fg transition-colors">
+            <Link href="/blog" className="link-quiet">
               Blog
             </Link>
-            <Link href="/lab" className="hover:text-fg transition-colors">
+            <Link href="/lab" className="link-quiet">
               Lab
             </Link>
-            <a
-              href="/feed.xml"
-              target="_blank"
-              rel="noopener"
-              className="hover:text-fg transition-colors"
-            >
+            <a href="/feed.xml" target="_blank" rel="noopener" className="link-quiet">
               RSS
             </a>
           </div>
@@ -62,7 +58,7 @@ export default function SiteFooter() {
           <SocialArea data={SOCIAL_DATA} />
         </div>
 
-        <div className="mt-6 text-[12px] text-faint">
+        <div className="mt-6 text-label text-faint">
           © {new Date().getFullYear()} Yunus Eş
         </div>
       </div>

@@ -25,12 +25,12 @@ export default function Home() {
   const latestExperiment = getLatestExperiment();
 
   return (
-    <main id="main" className="flex-1 flex items-center justify-center px-6 py-16 max-md:py-12 max-md:px-5">
+    <main id="main" className="flex-1 flex items-center justify-center page-shell">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(personSchema) }}
       />
-      <div className="w-full max-w-[560px]">
+      <div className="w-full max-w-intro">
         <div className="flex items-center gap-6">
           <AvatarLink />
 
@@ -48,7 +48,7 @@ export default function Home() {
         </div>
 
         <div
-          className="mt-10 space-y-5 text-[15px] leading-[1.7] text-muted animate-fade-in-up"
+          className="mt-10 space-y-5 text-body text-muted animate-fade-in-up"
           style={{ animationDelay: "200ms" }}
         >
           <p>
@@ -62,7 +62,7 @@ export default function Home() {
             <Link
               href="https://codecube.com.tr"
               target="_blank"
-              className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+              className="link-inline"
             >
               CodeCube Software
             </Link>
@@ -72,18 +72,18 @@ export default function Home() {
           <p>
             <Link
               href="/blog"
-              className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+              className="link-inline"
             >
               Blog yazılarıma
             </Link>{" "}
             göz atabilir,{" "}
-            <SocialAnchor className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors">
+            <SocialAnchor className="link-inline">
               sosyal medya hesaplarımdan
             </SocialAnchor>{" "}
             beni takip edebilir ve{" "}
             <Link
               href="/lab"
-              className="text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+              className="link-inline"
             >
               lab
             </Link>&apos;deki oyun ve deneyleri{" "}
@@ -96,14 +96,12 @@ export default function Home() {
             className="mt-12 pt-8 border-t border-line animate-fade-in-up"
             style={{ animationDelay: "300ms" }}
           >
-            <div className="text-[12px] text-faint uppercase tracking-[0.08em] mb-4">
-              Son yazı
-            </div>
+            <div className="eyebrow mb-4">Son yazı</div>
             <Link href={`/blog/${latestPost.slug}`} className="group block">
-              <h2 className="text-xl font-medium tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors">
+              <h2 className="font-blog-serif text-xl font-semibold tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors">
                 {latestPost.title}
               </h2>
-              <div className="mt-2 flex items-baseline gap-3 text-[13px] text-faint">
+              <div className="mt-2 flex items-baseline gap-3 text-meta text-faint">
                 <time dateTime={latestPost.date}>
                   {formatDate(latestPost.date)}
                 </time>
@@ -111,14 +109,14 @@ export default function Home() {
                 <span>{latestPost.readingTime} dk okuma</span>
               </div>
               {latestPost.summary && (
-                <p className="mt-3 text-[15px] leading-[1.7] text-muted">
+                <p className="font-blog-serif mt-3 text-body text-muted">
                   {latestPost.summary}
                 </p>
               )}
             </Link>
             <Link
               href="/blog"
-              className="inline-flex items-center gap-1.5 mt-5 text-[14px] text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+              className="link-inline inline-flex items-center gap-1.5 mt-5 text-ui"
             >
               Tüm yazılar
               <span aria-hidden="true">→</span>
@@ -131,9 +129,7 @@ export default function Home() {
             className="mt-12 pt-8 border-t border-line animate-fade-in-up"
             style={{ animationDelay: "400ms" }}
           >
-            <div className="text-[12px] text-faint uppercase tracking-[0.08em] mb-4">
-              Son deney
-            </div>
+            <div className="eyebrow mb-4">Son deney</div>
             {/* Blogun aksine deneyin anlatacagi seyi gorselin kendisi
                 anlatiyor; burada ozet yok, kapak ve ad yetiyor. */}
             <Link href={`/lab/${latestExperiment.slug}`} className="group block">
@@ -147,7 +143,7 @@ export default function Home() {
                 <h2 className="text-xl font-medium tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors">
                   {latestExperiment.title}
                 </h2>
-                <div className="mt-2 font-mono text-[12px] text-faint">
+                <div className="mt-2 font-mono text-label text-faint">
                   {stampDate(latestExperiment.date)}
                   <span className="mx-2 text-line">·</span>
                   {latestExperiment.tag}
@@ -156,7 +152,7 @@ export default function Home() {
             </Link>
             <Link
               href="/lab"
-              className="inline-flex items-center gap-1.5 mt-5 text-[14px] text-fg underline decoration-line underline-offset-4 hover:decoration-fg transition-colors"
+              className="link-inline inline-flex items-center gap-1.5 mt-5 text-ui"
             >
               Tüm deneyler
               <span aria-hidden="true">→</span>

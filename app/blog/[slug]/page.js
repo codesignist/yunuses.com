@@ -1,5 +1,5 @@
 import ReadingProgress from "components/atoms/ReadingProgress";
-import Link from "next/link";
+import BackLink from "components/atoms/BackLink";
 import { notFound } from "next/navigation";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
 import { PERSON, SITE_URL } from "lib/identity";
@@ -65,7 +65,7 @@ export default async function PostPage({ params }) {
   };
 
   return (
-    <main id="main" className="flex-1 px-6 py-20 max-md:py-12 max-md:px-5">
+    <main id="main" className="flex-1 page-shell">
       <ReadingProgress />
       <script
         type="application/ld+json"
@@ -75,18 +75,13 @@ export default async function PostPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }}
       />
-      <article className="w-full max-w-[680px] mx-auto">
+      <article className="w-full max-w-reading mx-auto">
         <header className="mb-12 animate-fade-in-up">
-          <Link
-            href="/blog"
-            className="text-[13px] text-faint hover:text-fg transition-colors"
-          >
-            ← Blog
-          </Link>
+          <BackLink href="/blog">Blog</BackLink>
           <h1 className="font-blog-serif mt-6 text-4xl font-semibold tracking-tight text-fg leading-tight max-md:text-3xl">
             {post.title}
           </h1>
-          <div className="mt-6 flex items-baseline gap-3 text-[13px] text-faint">
+          <div className="mt-6 flex items-baseline gap-3 text-meta text-faint">
             <time dateTime={post.date}>{formatDate(post.date)}</time>
             <span className="text-line">·</span>
             <span>{post.readingTime} dk okuma</span>

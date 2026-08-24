@@ -1,12 +1,10 @@
 import "../styles/globals.css";
 import Script from "next/script";
 import ThemeInit from "components/atoms/ThemeInit";
-import ThemeToggle from "components/atoms/ThemeToggle";
-import FullscreenToggle from "components/atoms/FullscreenToggle";
-import CursorTrailToggle from "components/atoms/CursorTrailToggle";
+import ChromeControls from "components/organisms/ChromeControls";
 import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SiteFooter from "components/organisms/SiteFooter";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,6 +16,25 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin", "latin-ext"],
   display: "swap",
+});
+
+// Serif once sadece /blog altinda yukleniyordu; bu yuzden anasayfadaki
+// "Son yazi" karti, blog listesindeki ayni basligi sans gosteriyordu.
+// Kok layout'a alindi ki yazi basligi nerede gorunurse gorunsun ayni
+// karakterde olsun. Degisken font, sabit agirlik listesine gerek yok.
+//
+// preload kapali: serif sadece anasayfa ile /blog altinda kullaniliyor,
+// oysa kok layout'ta durdugu icin preload her rotaya link dusuruyordu —
+// three.js yukleyen deney sayfalarina 4 gereksiz font dosyasi. CSS ayni
+// pakette geldigi icin ihtiyac duyan sayfa fontu yine ilk boyamada
+// istiyor; display:swap ve next/font'un olcu-duzeltilmis yedek fontu
+// aradaki farki kapatiyor.
+const sourceSerif = Source_Serif_4({
+  variable: "--font-blog-serif",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  style: ["normal", "italic"],
+  preload: false,
 });
 
 const title = "Yunus Eş";
@@ -67,7 +84,7 @@ export default function RootLayout({ children }) {
       lang="tr"
       data-scroll-behavior="smooth"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable}`}
+      className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable}`}
     >
       <body className="flex flex-col min-h-screen">
         <ThemeInit />
@@ -77,9 +94,7 @@ export default function RootLayout({ children }) {
         >
           İçeriğe geç
         </a>
-        <CursorTrailToggle />
-        <ThemeToggle />
-        <FullscreenToggle />
+        <ChromeControls />
         <CursorTrailLoader />
         {children}
         <SiteFooter />

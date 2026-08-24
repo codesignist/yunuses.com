@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BackLink from "components/atoms/BackLink";
 import ExperimentCover from "components/atoms/ExperimentCover";
 import { getExperiments, stampDate } from "lib/experiments";
 import { SITE_URL } from "lib/identity";
@@ -36,23 +37,18 @@ const labListSchema = {
 
 export default function LabIndex() {
   return (
-    <main id="main" className="flex-1 px-6 py-20 max-md:py-12 max-md:px-5">
+    <main id="main" className="flex-1 page-shell">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(labListSchema) }}
       />
-      <div className="w-full max-w-[680px] mx-auto">
+      <div className="w-full max-w-reading mx-auto">
         <header className="mb-16 max-md:mb-12 animate-fade-in-up">
-          <Link
-            href="/"
-            className="text-[13px] text-faint hover:text-fg transition-colors"
-          >
-            ← Anasayfa
-          </Link>
+          <BackLink href="/">Anasayfa</BackLink>
           <h1 className="mt-6 text-4xl font-medium tracking-tight text-fg leading-tight max-md:text-3xl">
             Lab
           </h1>
-          <p className="mt-3 text-[15px] leading-[1.7] text-muted">
+          <p className="mt-3 text-body text-muted">
             Eski Flash dönemimden bu yana biriken küçük deneyler, prototipler ve
             görsel oyunlar. Hepsi bağımsız sayfalarda; ana siteyi yormadan
             isteğe bağlı çalışıyor.
@@ -74,7 +70,7 @@ export default function LabIndex() {
                   />
                 )}
                 <div className={item.cover ? "mt-4" : ""}>
-                  <div className="font-mono text-[12px] text-faint">
+                  <div className="font-mono text-label text-faint">
                     {stampDate(item.date)}
                     <span className="mx-2 text-line">·</span>
                     {item.tag}
@@ -82,7 +78,7 @@ export default function LabIndex() {
                   <h2 className="mt-2 text-2xl font-medium tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors max-md:text-xl">
                     {item.title}
                   </h2>
-                  <p className="mt-3 text-[15px] leading-[1.7] text-muted">
+                  <p className="mt-3 text-body text-muted">
                     {item.description}
                   </p>
                 </div>

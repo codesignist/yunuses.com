@@ -14,11 +14,11 @@ const Lessons = ({ lessons }) => (
       return (
         <div
           key={index}
-          className="flex items-baseline gap-2 px-3 py-2.5 text-[13px] truncate"
+          className="flex items-baseline gap-2 px-3 py-2.5 text-meta truncate"
           style={{ backgroundColor: c.bg, color: c.text }}
           title={name}
         >
-          <span className="opacity-60 font-mono text-[11px] shrink-0 w-5">
+          <span className="opacity-60 font-mono text-label shrink-0 w-5">
             {String(index).padStart(2, "0")}
           </span>
           <span className="truncate">{name}</span>
@@ -36,7 +36,7 @@ const Types = ({ types }) => (
           className="block w-3 h-3 shrink-0"
           style={{ backgroundColor: `var(--color-type-${type})` }}
         />
-        <span className="text-[12px] text-muted">{name}</span>
+        <span className="text-label text-muted">{name}</span>
       </div>
     ))}
   </div>

@@ -43,7 +43,7 @@ export default function CursorTrailToggle() {
         type="button"
         aria-label="İmleç izi"
         data-chrome
-        className="fixed top-5 right-[108px] z-40 w-9 h-9 rounded-full cursor-pointer"
+        className="w-9 h-9 shrink-0 rounded-full cursor-pointer"
       />
     );
   }
@@ -56,7 +56,7 @@ export default function CursorTrailToggle() {
       title={enabled ? "İmleç izini kapat" : "İmleç izini aç"}
       aria-pressed={enabled}
       data-chrome
-      className="fixed top-5 right-[108px] z-40 w-9 h-9 rounded-full cursor-pointer flex items-center justify-center text-faint hover:text-fg hover:bg-line-soft transition-colors"
+      className="w-9 h-9 shrink-0 rounded-full cursor-pointer flex items-center justify-center text-faint hover:text-fg hover:bg-line-soft transition-colors"
     >
       {enabled ? (
         <svg
