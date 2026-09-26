@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
 import useLabKeys from "lib/useLabKeys";
 import LabOptionBar from "components/molecules/LabOptionBar";
 
@@ -8,14 +9,17 @@ const CAM_DIST = 1400;
 const FOCAL_BASE = 1000;
 const POINTS = 200000;
 const WARMUP = 1000;
-const BUCKETS = 6;
+// Toplamali karisimda cizgi basina opaklik carpani. WebGL cizgisi her
+// zaman bir aygit pikseli; eski 0.45-1 px'lik Canvas cizgileriyle ayni
+// yogunluga bununla ayarlaniyor.
+const LINE_GAIN = 0.6;
 const NEAR_D = CAM_DIST - CUBE_HALF * 2;
 const FAR_D = CAM_DIST + CUBE_HALF * 2;
 
 const ATTRACTORS = {
   lorenz: {
     label: "Lorenz",
-    rgb: "110, 200, 255",
+    rgb: [110, 200, 255],
     dt: 0.005,
     start: [0.1, 0, 0],
     step: (x, y, z, dt) => {
@@ -27,7 +31,7 @@ const ATTRACTORS = {
   },
   aizawa: {
     label: "Aizawa",
-    rgb: "255, 145, 215",
+    rgb: [255, 145, 215],
     dt: 0.01,
     start: [0.1, 0, 0],
     step: (x, y, z, dt) => {
@@ -46,7 +50,7 @@ const ATTRACTORS = {
   },
   halvorsen: {
     label: "Halvorsen",
-    rgb: "255, 175, 100",
+    rgb: [255, 175, 100],
     dt: 0.005,
     start: [-1.48, -1.51, 2.04],
     step: (x, y, z, dt) => {
@@ -59,7 +63,7 @@ const ATTRACTORS = {
   },
   thomas: {
     label: "Thomas",
-    rgb: "150, 240, 180",
+    rgb: [150, 240, 180],
     dt: 0.05,
     start: [0.1, 0, 0],
     step: (x, y, z, dt) => {
@@ -77,18 +81,10 @@ const ATTRACTOR_OPTIONS = ATTRACTOR_IDS.map((id) => ({ id, label: ATTRACTORS[id]
 
 function buildTrajectory(attractor) {
   const n = POINTS;
-  const xs = new Float32Array(n);
-  const ys = new Float32Array(n);
-  const zs = new Float32Array(n);
+  const pos = new Float32Array(n * 3);
   let [x, y, z] = attractor.start;
   for (let i = 0; i < WARMUP; i++) {
     [x, y, z] = attractor.step(x, y, z, attractor.dt);
-  }
-  for (let i = 0; i < n; i++) {
-    [x, y, z] = attractor.step(x, y, z, attractor.dt);
-    xs[i] = x;
-    ys[i] = y;
-    zs[i] = z;
   }
   let minX = Infinity;
   let maxX = -Infinity;
@@ -97,28 +93,56 @@ function buildTrajectory(attractor) {
   let minZ = Infinity;
   let maxZ = -Infinity;
   for (let i = 0; i < n; i++) {
-    if (xs[i] < minX) minX = xs[i];
-    if (xs[i] > maxX) maxX = xs[i];
-    if (ys[i] < minY) minY = ys[i];
-    if (ys[i] > maxY) maxY = ys[i];
-    if (zs[i] < minZ) minZ = zs[i];
-    if (zs[i] > maxZ) maxZ = zs[i];
+    [x, y, z] = attractor.step(x, y, z, attractor.dt);
+    pos[i * 3] = x;
+    pos[i * 3 + 1] = y;
+    pos[i * 3 + 2] = z;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z;
+    if (z > maxZ) maxZ = z;
   }
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
   const cz = (minZ + maxZ) / 2;
   const range = Math.max(maxX - minX, maxY - minY, maxZ - minZ) || 1;
   const s = (CUBE_HALF * 1.8) / range;
-  for (let i = 0; i < n; i++) {
-    xs[i] = (xs[i] - cx) * s;
-    ys[i] = (ys[i] - cy) * s;
-    zs[i] = (zs[i] - cz) * s;
+  for (let i = 0; i < n * 3; i += 3) {
+    pos[i] = (pos[i] - cx) * s;
+    pos[i + 1] = (pos[i + 1] - cy) * s;
+    pos[i + 2] = (pos[i + 2] - cz) * s;
   }
-  return { xs, ys, zs, count: n };
+  return { positions: pos, count: n };
 }
 
+// Cizgiler toplamali karisiyor: yorunge sik gectigi yerde renk birikip
+// beyaza dogru parliyor. Onceden derinlik 6 kovaya bolunup her kova tek
+// bir opaklikla ciziliyordu; burada opaklik her noktada surekli.
+const LINE_VS = `
+  uniform float uNearD;
+  uniform float uFarD;
+  varying float vNear;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    vNear = 1.0 - clamp((-mv.z - uNearD) / (uFarD - uNearD), 0.0, 1.0);
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+
+const LINE_FS = `
+  uniform vec3 uColor;
+  uniform float uGain;
+  varying float vNear;
+  void main() {
+    gl_FragColor = vec4(uColor, (0.04 + vNear * vNear * 0.42) * uGain);
+  }
+`;
+
 export default function Attractors() {
-  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const overlayRef = useRef(null);
   const [active, setActive] = useState("lorenz");
   const [ready, setReady] = useState(false);
 
@@ -144,8 +168,9 @@ export default function Attractors() {
   }, [active]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    const container = containerRef.current;
+    const overlay = overlayRef.current;
+    const octx = overlay.getContext("2d");
 
     const state = {
       yaw: 0.7,
@@ -164,20 +189,83 @@ export default function Attractors() {
       pinchZoomStart: 1,
     };
 
-    const bucketArrays = [];
-    for (let b = 0; b < BUCKETS; b++) bucketArrays.push([]);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setClearColor(0x000000, 1);
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.domElement.style.display = "block";
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 1, 10, CAM_DIST * 4);
+    camera.position.set(0, 0, CAM_DIST);
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Color() },
+        uNearD: { value: NEAR_D },
+        uFarD: { value: FAR_D },
+        uGain: { value: LINE_GAIN },
+      },
+      vertexShader: LINE_VS,
+      fragmentShader: LINE_FS,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    // Donus matrisi elle yaziliyor: onceki Canvas 2D projeksiyonuyla
+    // birebir ayni gorunum (baslangic acisi, surukleme yonu) korunsun diye.
+    const line = new THREE.Line(new THREE.BufferGeometry(), material);
+    line.matrixAutoUpdate = false;
+    line.frustumCulled = false;
+    line.visible = false;
+    scene.add(line);
+
+    let uploaded = null;
+    function syncTrajectory() {
+      const traj = trajRef.current;
+      if (traj === uploaded) return;
+      uploaded = traj;
+      // Ayni geometride attribute degistirmek eski GPU tamponunu sizdiriyor;
+      // her cekici icin yeni geometri, eskisi dispose.
+      line.geometry.dispose();
+      line.geometry = new THREE.BufferGeometry();
+      if (!traj) {
+        line.visible = false;
+        return;
+      }
+      line.geometry.setAttribute("position", new THREE.BufferAttribute(traj.positions, 3));
+      const [r, g, b] = attractorRef.current.rgb;
+      material.uniforms.uColor.value.setRGB(r / 255, g / 255, b / 255);
+      line.visible = true;
+    }
+
+    // Eski projeksiyonda odak uzakligi piksel cinsinden sabitti; ayni
+    // olcegi tutmak icin gorus acisi yukseklik ve zoom'dan turetiliyor.
+    function updateCamera() {
+      const fov = 2 * Math.atan(state.height / 2 / (FOCAL_BASE * state.zoom));
+      camera.fov = THREE.MathUtils.radToDeg(fov);
+      camera.aspect = state.width / Math.max(1, state.height);
+      camera.updateProjectionMatrix();
+    }
 
     function resize() {
+      const rect = container.getBoundingClientRect();
+      state.width = Math.max(1, rect.width);
+      state.height = Math.max(1, rect.height);
+      renderer.setSize(state.width, state.height, false);
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-      state.width = rect.width;
-      state.height = rect.height;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      overlay.width = Math.floor(state.width * dpr);
+      overlay.height = Math.floor(state.height * dpr);
+      octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      updateCamera();
     }
+    const ro = new ResizeObserver(resize);
+    ro.observe(container);
     resize();
-    window.addEventListener("resize", resize);
 
     function drawGnomon() {
       const ox = state.width - 56;
@@ -212,124 +300,69 @@ export default function Attractors() {
       });
       tips.sort((a, b) => a.z - b.z);
 
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
-      ctx.beginPath();
-      ctx.arc(ox, oy, 1.8, 0, Math.PI * 2);
-      ctx.fill();
+      octx.fillStyle = "rgba(255,255,255,0.55)";
+      octx.beginPath();
+      octx.arc(ox, oy, 1.8, 0, Math.PI * 2);
+      octx.fill();
 
-      ctx.lineWidth = 1.4;
-      ctx.font = "10px ui-monospace, monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      octx.lineWidth = 1.4;
+      octx.font = "10px ui-monospace, monospace";
+      octx.textAlign = "center";
+      octx.textBaseline = "middle";
       for (const t of tips) {
         const depthNorm = Math.max(0, Math.min(1, (t.z + 1) / 2));
         const near = 1 - depthNorm;
         const alpha = 0.35 + near * 0.55;
-        ctx.strokeStyle = `rgba(${t.rgb}, ${alpha})`;
-        ctx.beginPath();
-        ctx.moveTo(ox, oy);
-        ctx.lineTo(t.sx, t.sy);
-        ctx.stroke();
+        octx.strokeStyle = `rgba(${t.rgb}, ${alpha})`;
+        octx.beginPath();
+        octx.moveTo(ox, oy);
+        octx.lineTo(t.sx, t.sy);
+        octx.stroke();
         const lx = ox + (t.sx - ox) * 1.28;
         const ly = oy + (t.sy - oy) * 1.28;
-        ctx.fillStyle = `rgba(${t.rgb}, ${Math.min(1, alpha + 0.2)})`;
-        ctx.fillText(t.label, lx, ly);
+        octx.fillStyle = `rgba(${t.rgb}, ${Math.min(1, alpha + 0.2)})`;
+        octx.fillText(t.label, lx, ly);
       }
     }
 
-    function render() {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, state.width, state.height);
-
+    function drawOverlay() {
+      octx.clearRect(0, 0, state.width, state.height);
+      if (chromeHiddenRef.current) return;
+      drawGnomon();
       const traj = trajRef.current;
-      const att = attractorRef.current;
-      const showChrome = !chromeHiddenRef.current;
-      if (!traj) {
-        if (showChrome) drawGnomon();
-        return;
-      }
+      if (!traj) return;
+      octx.fillStyle = "rgba(255,255,255,0.45)";
+      octx.font = "11px ui-monospace, monospace";
+      octx.textAlign = "right";
+      octx.textBaseline = "alphabetic";
+      octx.fillText(
+        `${attractorRef.current.label}   ${traj.count.toLocaleString("tr")} adım`,
+        state.width - 16,
+        state.height - 18,
+      );
+    }
+
+    function render() {
+      syncTrajectory();
 
       const cy = Math.cos(state.yaw);
       const sy = Math.sin(state.yaw);
       const cp = Math.cos(state.pitch);
       const sp = Math.sin(state.pitch);
-      const fBase = FOCAL_BASE * state.zoom;
-      const halfW = state.width / 2;
-      const halfH = state.height / 2;
-
-      const xs = traj.xs;
-      const ys = traj.ys;
-      const zs = traj.zs;
-      const n = traj.count;
-      const depthRange = FAR_D - NEAR_D;
-
-      for (let b = 0; b < BUCKETS; b++) bucketArrays[b].length = 0;
-
-      let prevSx = 0;
-      let prevSy = 0;
-      let prevBucket = 0;
-      let havePrev = false;
-
-      for (let i = 0; i < n; i++) {
-        const x = xs[i];
-        const y = ys[i];
-        const z = zs[i];
-        const x1 = x * cy - z * sy;
-        const z1 = x * sy + z * cy;
-        const y2 = y * cp - z1 * sp;
-        const z2 = y * sp + z1 * cp;
-        const camZ = z2 + CAM_DIST;
-        if (camZ <= 10) {
-          havePrev = false;
-          continue;
-        }
-        const f = fBase / camZ;
-        const sx = x1 * f + halfW;
-        const sy_ = -y2 * f + halfH;
-        let bIdx = ((camZ - NEAR_D) / depthRange) * BUCKETS;
-        bIdx = bIdx < 0 ? 0 : bIdx >= BUCKETS ? BUCKETS - 1 : bIdx | 0;
-
-        if (havePrev) {
-          const useBucket = prevBucket < bIdx ? prevBucket : bIdx;
-          const arr = bucketArrays[useBucket];
-          arr.push(prevSx, prevSy, sx, sy_);
-        }
-        prevSx = sx;
-        prevSy = sy_;
-        prevBucket = bIdx;
-        havePrev = true;
-      }
-
-      ctx.lineCap = "round";
-      for (let b = BUCKETS - 1; b >= 0; b--) {
-        const arr = bucketArrays[b];
-        if (arr.length === 0) continue;
-        const t = b / (BUCKETS - 1);
-        const near = 1 - t;
-        const alpha = 0.04 + near * near * 0.42;
-        const lw = 0.45 + near * 0.55;
-        ctx.strokeStyle = `rgba(${att.rgb}, ${alpha})`;
-        ctx.lineWidth = lw;
-        ctx.beginPath();
-        for (let k = 0; k < arr.length; k += 4) {
-          ctx.moveTo(arr[k], arr[k + 1]);
-          ctx.lineTo(arr[k + 2], arr[k + 3]);
-        }
-        ctx.stroke();
-      }
-
-      if (!showChrome) return;
-      drawGnomon();
-
-      ctx.fillStyle = "rgba(255,255,255,0.45)";
-      ctx.font = "11px ui-monospace, monospace";
-      ctx.textAlign = "right";
-      ctx.textBaseline = "alphabetic";
-      ctx.fillText(
-        `${att.label}   ${n.toLocaleString("tr")} adım`,
-        state.width - 16,
-        state.height - 18,
+      // Eski projeksiyon: once y ekseninde yaw, sonra x ekseninde pitch,
+      // derinlik kameradan uzaga dogru pozitif. three'de kamera -z'ye baktigi
+      // icin son satir ters isaretli.
+      line.matrix.set(
+        cy, 0, -sy, 0,
+        -sp * sy, cp, -sp * cy, 0,
+        -cp * sy, -sp, -cp * cy, 0,
+        0, 0, 0, 1,
       );
+      line.matrixWorldNeedsUpdate = true;
+
+      updateCamera();
+      renderer.render(scene, camera);
+      drawOverlay();
     }
 
     // Donus ve momentum 60 Hz kare birimiyle yazili; frames ile olcekleniyor.
@@ -358,7 +391,7 @@ export default function Attractors() {
     raf = requestAnimationFrame(loop);
 
     function onDown(e) {
-      canvas.setPointerCapture?.(e.pointerId);
+      container.setPointerCapture?.(e.pointerId);
       state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (state.pointers.size === 1) {
         state.dragging = true;
@@ -407,7 +440,7 @@ export default function Attractors() {
 
     function onUp(e) {
       state.pointers.delete(e.pointerId);
-      canvas.releasePointerCapture?.(e.pointerId);
+      container.releasePointerCapture?.(e.pointerId);
       if (state.pointers.size < 2) state.pinchStart = 0;
       if (state.pointers.size === 0) {
         state.dragging = false;
@@ -427,29 +460,40 @@ export default function Attractors() {
       state.lastInteractT = performance.now();
     }
 
-    canvas.addEventListener("pointerdown", onDown);
-    canvas.addEventListener("pointermove", onMove);
-    canvas.addEventListener("pointerup", onUp);
-    canvas.addEventListener("pointercancel", onUp);
-    canvas.addEventListener("wheel", onWheel, { passive: false });
+    container.addEventListener("pointerdown", onDown);
+    container.addEventListener("pointermove", onMove);
+    container.addEventListener("pointerup", onUp);
+    container.addEventListener("pointercancel", onUp);
+    container.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
-      canvas.removeEventListener("pointerdown", onDown);
-      canvas.removeEventListener("pointermove", onMove);
-      canvas.removeEventListener("pointerup", onUp);
-      canvas.removeEventListener("pointercancel", onUp);
-      canvas.removeEventListener("wheel", onWheel);
+      ro.disconnect();
+      container.removeEventListener("pointerdown", onDown);
+      container.removeEventListener("pointermove", onMove);
+      container.removeEventListener("pointerup", onUp);
+      container.removeEventListener("pointercancel", onUp);
+      container.removeEventListener("wheel", onWheel);
+      line.geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+      if (renderer.domElement.parentNode === container) {
+        container.removeChild(renderer.domElement);
+      }
     };
   }, []);
 
   return (
     <div className="absolute inset-0">
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full touch-none select-none"
+      <div
+        ref={containerRef}
+        className="absolute inset-0 touch-none select-none"
         style={{ cursor: "grab" }}
+      />
+      <canvas
+        ref={overlayRef}
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full pointer-events-none"
       />
 
       {!ready && (

@@ -12,7 +12,7 @@
     "title": "Attractors",
     "tag": "Görsel",
     "date": "2026-05-25",
-    "description": "Lorenz, Aizawa, Halvorsen, Thomas garip çekicileri. Tek bir denklem 200 bin adımda kelebek ve çiçek formları çıkarıyor. Saf Canvas 2D, etkileşimli.",
+    "description": "Lorenz, Aizawa, Halvorsen, Thomas garip çekicileri. Tek bir denklem 200 bin adımda kelebek ve çiçek formları çıkarıyor. WebGL ile çiziliyor, etkileşimli.",
     "cover": "/lab/covers/attractors.webp"
   },
   {
