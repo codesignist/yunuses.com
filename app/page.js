@@ -71,6 +71,18 @@ export default function Home() {
             özel yazılımlar tasarlayıp geliştiriyoruz.
           </p>
           <p>
+            Bir de yerli markaları bir araya getiren{" "}
+            <Link
+              href="https://yerlimi.net"
+              target="_blank"
+              className="link-inline"
+            >
+              Yerlimi.net
+            </Link>{" "}
+            projemiz var. Bir markanın menşeini arayarak ya da ürünün barkodunu
+            okutarak öğrenebilir, yerli alternatiflerini görebilirsiniz.
+          </p>
+          <p>
             <Link
               href="/blog"
               className="link-inline"
