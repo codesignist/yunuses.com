@@ -9,8 +9,96 @@ const MAX_ALPHA = 0.55;
 const MIN_WIDTH = 0.5;
 const MAX_WIDTH = 1.6;
 const ORBIT_PAD_RATIO = 1.6; // ellipse, linkin sınırından kaç px dışarıdan geçer
-const ORBIT_SPEED = 0.2; // rad/frame — ~1.5 sn'de tam tur
+const ORBIT_SPEED = 0.2; // rad/frame — tam tur ~31 frame, 60 Hz'de ~0.5 sn
 const ORBIT_JITTER = 12; // px, her frame eklenen rastgele şaşma (kalemle çizim hissi)
+
+// Büyük tıklama alanlarında (yazı ve deney kartları) elips kartın çok dışına
+// taşıyordu; orada iz, kutunun biraz dışından yuvarlak köşeli bir dikdörtgen
+// çiziyor. Küçük linkler ve yuvarlak avatar elipste kalıyor.
+const RECT_MIN_W = 200;
+const RECT_MIN_H = 80;
+const RECT_PAD = 10; // px, kutunun dışına mesafe
+const RECT_RADIUS = 14;
+// Tur hızı elipsteki gibi açı cinsinden: kart ne kadar büyük olursa olsun tur
+// süresi aynı. Elipsten biraz yavaş; 0.12 ile tam tur ~52 frame (~0.9 sn).
+const RECT_ORBIT_SPEED = 0.12; // rad/frame
+// Yaylı takip köşeleri kesiyor, köşeden sonra salınıp kenarı
+// dalgalandırıyordu; o yüzden iz önce yayla kenara yaklaşıyor, yola değince
+// kilitlenip doğrudan yolun üzerinden gidiyor.
+const RECT_LOCK_DIST = 8; // px
+const RECT_LOCK_MAX_FRAMES = 24; // yaklaşma uzarsa yine de kilitlen
+// Büyük kartta frame başına onlarca px yol alınıyor; adım bu değeri aşarsa
+// köşeler iki nokta arasında kalıp kesilmesin diye ara noktalar ekleniyor.
+const RECT_SUBSTEP = 60;
+// Düz kenarda 1-2 px'lik dalga bile yamuk okunuyor; eğride kalem hissi olan
+// şey burada bozukluk gibi duruyor.
+const RECT_JITTER = 1;
+
+const isLargeTarget = (rect) =>
+  rect.width >= RECT_MIN_W && rect.height >= RECT_MIN_H;
+
+function rectPathLength(rect) {
+  const w = rect.width + RECT_PAD * 2;
+  const h = rect.height + RECT_PAD * 2;
+  const r = Math.min(RECT_RADIUS, w / 2, h / 2);
+  return 2 * (w + h) - (8 - 2 * Math.PI) * r;
+}
+
+// Kutunun etrafındaki yuvarlak köşeli yolda, sol üst köşeden saat yönünde
+// s px ilerideki nokta. Sonuç out'a yazılıyor, her frame nesne üretilmesin.
+function rectPathPoint(rect, s, out) {
+  const w = rect.width + RECT_PAD * 2;
+  const h = rect.height + RECT_PAD * 2;
+  const r = Math.min(RECT_RADIUS, w / 2, h / 2);
+  const left = rect.left - RECT_PAD;
+  const top = rect.top - RECT_PAD;
+  const ew = w - 2 * r;
+  const eh = h - 2 * r;
+  const arc = (Math.PI * r) / 2;
+  const per = 2 * (ew + eh) + 4 * arc;
+  let d = ((s % per) + per) % per;
+
+  const corner = (cx, cy, a0) => {
+    const a = a0 + d / r;
+    out.x = cx + r * Math.cos(a);
+    out.y = cy + r * Math.sin(a);
+    return out;
+  };
+
+  if (d < ew) { out.x = left + r + d; out.y = top; return out; }
+  d -= ew;
+  if (d < arc) return corner(left + w - r, top + r, -Math.PI / 2);
+  d -= arc;
+  if (d < eh) { out.x = left + w; out.y = top + r + d; return out; }
+  d -= eh;
+  if (d < arc) return corner(left + w - r, top + h - r, 0);
+  d -= arc;
+  if (d < ew) { out.x = left + w - r - d; out.y = top + h; return out; }
+  d -= ew;
+  if (d < arc) return corner(left + r, top + h - r, Math.PI / 2);
+  d -= arc;
+  if (d < eh) { out.x = left; out.y = top + h - r - d; return out; }
+  d -= eh;
+  return corner(left + r, top + r, Math.PI);
+}
+
+// İmlece en yakın yol noktası: yörünge imlecin girdiği yerden başlasın.
+function nearestRectPathPos(rect, x, y) {
+  const per = rectPathLength(rect);
+  const p = { x: 0, y: 0 };
+  let best = 0;
+  let bestD = Infinity;
+  for (let i = 0; i < 96; i++) {
+    const s = (i / 96) * per;
+    rectPathPoint(rect, s, p);
+    const dd = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (dd < bestD) {
+      bestD = dd;
+      best = s;
+    }
+  }
+  return best;
+}
 
 export default function CursorTrail() {
   const canvasRef = useRef(null);
@@ -48,6 +136,10 @@ export default function CursorTrail() {
     let active = false;
     let hoveredLink = null;
     let orbitAngle = 0;
+    let orbitPos = 0; // büyük hedeflerde dikdörtgen yol üzerindeki px konumu
+    let rectLocked = false;
+    let approachFrames = 0;
+    const orbitPt = { x: 0, y: 0 };
     let strokeRGB = "250, 250, 250";
     let mouseOverFixed = false;
     // elementFromPoint sonucunu son kez gördüğümüz element için cache'liyoruz —
@@ -108,7 +200,10 @@ export default function CursorTrail() {
             e.clientY - (rect.top + rect.height / 2),
             e.clientX - (rect.left + rect.width / 2),
           );
+          orbitPos = nearestRectPathPos(rect, e.clientX, e.clientY);
         }
+        rectLocked = false;
+        approachFrames = 0;
         hoveredLink = newLink;
       }
     };
@@ -127,6 +222,8 @@ export default function CursorTrail() {
         p.fixed = ctx.fixed;
       }
       active = true;
+      rectLocked = false;
+      approachFrames = 0;
       hoveredLink = ctx.link;
     };
     const onLeave = () => {
@@ -169,9 +266,45 @@ export default function CursorTrail() {
       // Hedef: link üzerindeyken yörünge noktası, değilse imlecin kendisi
       let targetX = mouse.x;
       let targetY = mouse.y;
-      if (hoveredLink) {
+      let onPath = false;
+      const rect = hoveredLink ? hoveredLink.getBoundingClientRect() : null;
+      if (rect && isLargeTarget(rect)) {
+        if (!rectLocked) {
+          // Yaklaşma: yolda imlecin girdiği noktaya yayla git.
+          rectPathPoint(rect, orbitPos, orbitPt);
+          targetX = orbitPt.x;
+          targetY = orbitPt.y;
+          approachFrames++;
+          const dist = Math.hypot(tracker.x - orbitPt.x, tracker.y - orbitPt.y);
+          if (dist < RECT_LOCK_DIST || approachFrames > RECT_LOCK_MAX_FRAMES) {
+            rectLocked = true;
+          }
+        }
+        if (rectLocked) {
+          const step = (rectPathLength(rect) * RECT_ORBIT_SPEED) / (Math.PI * 2);
+          const n = Math.max(1, Math.ceil(step / RECT_SUBSTEP));
+          const x0 = tracker.x;
+          const y0 = tracker.y;
+          for (let k = 1; k <= n; k++) {
+            rectPathPoint(rect, orbitPos + (step * k) / n, orbitPt);
+            trail.shift();
+            trail.push({
+              x: orbitPt.x + (Math.random() - 0.5) * RECT_JITTER * 2,
+              y: orbitPt.y + (Math.random() - 0.5) * RECT_JITTER * 2,
+              fixed: mouseOverFixed,
+            });
+          }
+          orbitPos += step;
+          tracker.x = orbitPt.x;
+          tracker.y = orbitPt.y;
+          // Karttan çıkınca yay kaldığı yerden devam etsin: son frame'in
+          // hareketi hız olarak kalıyor, iz imlece savrularak dönüyor.
+          velocity.x = tracker.x - x0;
+          velocity.y = tracker.y - y0;
+          onPath = true;
+        }
+      } else if (rect) {
         orbitAngle += ORBIT_SPEED;
-        const rect = hoveredLink.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
         const rx = (rect.width / 2) * ORBIT_PAD_RATIO;
@@ -186,15 +319,17 @@ export default function CursorTrail() {
           (Math.random() - 0.5) * ORBIT_JITTER * 2;
       }
 
-      // İç aşama: velocity, hedefe doğru yaklaşır (lag yaratır)
-      velocity.x += (targetX - tracker.x - velocity.x) * ELASTIC_INNER;
-      velocity.y += (targetY - tracker.y - velocity.y) * ELASTIC_INNER;
-      // Dış aşama: tracker velocity ile ilerler (momentum → overshoot → yaylanma)
-      tracker.x += velocity.x * ELASTIC_OUTER;
-      tracker.y += velocity.y * ELASTIC_OUTER;
+      if (!onPath) {
+        // İç aşama: velocity, hedefe doğru yaklaşır (lag yaratır)
+        velocity.x += (targetX - tracker.x - velocity.x) * ELASTIC_INNER;
+        velocity.y += (targetY - tracker.y - velocity.y) * ELASTIC_INNER;
+        // Dış aşama: tracker velocity ile ilerler (momentum → overshoot → yaylanma)
+        tracker.x += velocity.x * ELASTIC_OUTER;
+        tracker.y += velocity.y * ELASTIC_OUTER;
 
-      trail.shift();
-      trail.push({ x: tracker.x, y: tracker.y, fixed: mouseOverFixed });
+        trail.shift();
+        trail.push({ x: tracker.x, y: tracker.y, fixed: mouseOverFixed });
+      }
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
