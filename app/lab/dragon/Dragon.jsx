@@ -11,49 +11,23 @@ import { createHead } from "./head";
 import { createLimbs } from "./limbs";
 import { createBreath } from "./breath";
 import { createPost } from "./post";
+import useLabKeys from "lib/useLabKeys";
+import LabOptionBar from "components/molecules/LabOptionBar";
 
 const LIGHT_DIR = new THREE.Vector3(440, 290, 320);
+const STYLE_OPTIONS = STYLE_IDS.map((id) => ({ id, label: STYLES[id].label }));
 
 export default function Dragon() {
   const containerRef = useRef(null);
   const branchRef = useRef(null);
   const [active, setActive] = useState("golge");
-  const [chromeHidden, setChromeHidden] = useState(false);
   const activeRef = useRef("golge");
 
   useEffect(() => {
     activeRef.current = active;
   }, [active]);
 
-  // 1 / 2 / 3 / 4 stil degistirir, H tum arayuz kromunu gizler
-  useEffect(() => {
-    function onKey(e) {
-      if (e.altKey || e.ctrlKey || e.metaKey) return;
-      const el = e.target;
-      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) {
-        return;
-      }
-      if (e.key === "h" || e.key === "H") {
-        setChromeHidden((v) => !v);
-        return;
-      }
-      const idx = parseInt(e.key, 10) - 1;
-      if (idx >= 0 && idx < STYLE_IDS.length) setActive(STYLE_IDS[idx]);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  // Durum <html> uzerinde ilan ediliyor cunku gizlenecek elemanlarin bir
-  // kismi (tema, imlec izi, tam ekran) kok layout'ta, bu bilesenin disinda.
-  // Temizlik sart: sayfadan cikilirken krom gizli kalirsa site genelinde
-  // gizli kalirdi.
-  useEffect(() => {
-    const root = document.documentElement;
-    if (chromeHidden) root.setAttribute("data-chrome-hidden", "");
-    else root.removeAttribute("data-chrome-hidden");
-    return () => root.removeAttribute("data-chrome-hidden");
-  }, [chromeHidden]);
+  useLabKeys(STYLE_IDS, setActive);
 
   // Dallarin fareye gore hafif kaymasi
   useEffect(() => {
@@ -298,30 +272,8 @@ export default function Dragon() {
         style={{ mixBlendMode: "multiply", transform: "scale(1.06)" }}
       />
 
-      <div data-chrome
-        className="fixed bottom-4 left-4 z-30 flex gap-1 bg-white/5 border border-white/10 rounded p-1 backdrop-blur-sm text-[12px]">
-        {STYLE_IDS.map((id, i) => (
-          <button
-            key={id}
-            onClick={() => setActive(id)}
-            className={`inline-flex items-center gap-1.5 px-2 py-1 rounded transition ${
-              active === id
-                ? "bg-white/20 text-white"
-                : "text-white/65 hover:text-white hover:bg-white/10"
-            }`}
-          >
-            <kbd className="text-[10px] leading-none px-1 py-0.5 rounded bg-white/10 border border-white/15 text-white/60">
-              {i + 1}
-            </kbd>
-            {STYLES[id].label}
-          </button>
-        ))}
-        <span className="ml-1 pl-2 pr-1 border-l border-white/10 inline-flex items-center gap-1.5 text-white/40">
-          <kbd className="text-[10px] leading-none px-1 py-0.5 rounded bg-white/10 border border-white/15 text-white/50">
-            H
-          </kbd>
-          gizle
-        </span>
+      <div className="fixed bottom-4 left-4 z-30">
+        <LabOptionBar options={STYLE_OPTIONS} active={active} onSelect={setActive} />
       </div>
     </div>
   );

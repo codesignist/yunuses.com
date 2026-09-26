@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import useLabKeys from "lib/useLabKeys";
+import LabOptionBar from "components/molecules/LabOptionBar";
 
 const CUBE_HALF = 320;
 const CAM_DIST = 1400;
@@ -70,6 +72,9 @@ const ATTRACTORS = {
   },
 };
 
+const ATTRACTOR_IDS = Object.keys(ATTRACTORS);
+const ATTRACTOR_OPTIONS = ATTRACTOR_IDS.map((id) => ({ id, label: ATTRACTORS[id].label }));
+
 function buildTrajectory(attractor) {
   const n = POINTS;
   const xs = new Float32Array(n);
@@ -119,6 +124,14 @@ export default function Attractors() {
 
   const trajRef = useRef(null);
   const attractorRef = useRef(ATTRACTORS.lorenz);
+
+  // Eksen gostergesi ve adim etiketi canvas'a ciziliyor, data-chrome ile
+  // gizlenemiyor; H durumunu cizim dongusune ref ile tasiyoruz.
+  const chromeHidden = useLabKeys(ATTRACTOR_IDS, setActive);
+  const chromeHiddenRef = useRef(false);
+  useEffect(() => {
+    chromeHiddenRef.current = chromeHidden;
+  }, [chromeHidden]);
 
   useEffect(() => {
     setReady(false);
@@ -230,8 +243,9 @@ export default function Attractors() {
 
       const traj = trajRef.current;
       const att = attractorRef.current;
+      const showChrome = !chromeHiddenRef.current;
       if (!traj) {
-        drawGnomon();
+        if (showChrome) drawGnomon();
         return;
       }
 
@@ -304,6 +318,7 @@ export default function Attractors() {
         ctx.stroke();
       }
 
+      if (!showChrome) return;
       drawGnomon();
 
       ctx.fillStyle = "rgba(255,255,255,0.45)";
@@ -317,17 +332,24 @@ export default function Attractors() {
       );
     }
 
+    // Donus ve momentum 60 Hz kare birimiyle yazili; frames ile olcekleniyor.
+    // Onceden kare basina uygulaniyordu, 144 Hz ekranda 2.4 kat hizli
+    // donuyor ve momentum daha cabuk sonuyordu.
     let raf = 0;
-    function loop() {
-      const now = performance.now();
+    let prevT = 0;
+    function loop(now) {
+      const dt = prevT ? Math.min(0.1, (now - prevT) / 1000) : 0;
+      prevT = now;
+      const frames = dt * 60;
       const idle = !state.dragging && now - state.lastInteractT > 2500;
       if (idle) {
-        state.yaw += 0.0015;
+        state.yaw += 0.0015 * frames;
       } else if (!state.dragging) {
-        state.yaw += state.vy;
-        state.pitch += state.vp;
-        state.vy *= 0.95;
-        state.vp *= 0.95;
+        state.yaw += state.vy * frames;
+        state.pitch += state.vp * frames;
+        const decay = Math.pow(0.95, frames);
+        state.vy *= decay;
+        state.vp *= decay;
       }
       state.pitch = Math.max(-1.45, Math.min(1.45, state.pitch));
       render();
@@ -437,24 +459,10 @@ export default function Attractors() {
       )}
 
       <div className="fixed bottom-4 left-4 z-30 flex flex-col gap-2 items-start">
-        <div className="text-[12px] text-white/60 px-1 pointer-events-none">
+        <div data-chrome className="text-[12px] text-white/60 px-1 pointer-events-none">
           Sürükleyerek döndür, tekerlekle yakınlaş.
         </div>
-        <div className="flex gap-1 bg-white/5 border border-white/10 rounded p-1 backdrop-blur-sm text-[12px]">
-          {Object.entries(ATTRACTORS).map(([id, a]) => (
-            <button
-              key={id}
-              onClick={() => setActive(id)}
-              className={`px-2 py-1 rounded transition ${
-                active === id
-                  ? "bg-white/20 text-white"
-                  : "text-white/65 hover:text-white hover:bg-white/10"
-              }`}
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
+        <LabOptionBar options={ATTRACTOR_OPTIONS} active={active} onSelect={setActive} />
       </div>
     </div>
   );
