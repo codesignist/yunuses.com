@@ -1,6 +1,7 @@
 import AvatarLink from "components/atoms/AvatarLink";
 import SocialAnchor from "components/atoms/SocialAnchor";
 import ExperimentCover from "components/atoms/ExperimentCover";
+import PostThumb from "components/atoms/PostThumb";
 import { getLatestExperiment, stampDate } from "lib/experiments";
 import { formatDate, getAllPosts } from "lib/posts";
 import { PERSON } from "lib/identity";
@@ -97,22 +98,28 @@ export default function Home() {
             style={{ animationDelay: "300ms" }}
           >
             <div className="eyebrow mb-4">Son yazı</div>
-            <Link href={`/blog/${latestPost.slug}`} className="group block">
-              <h2 className="font-blog-serif text-xl font-semibold tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors">
-                {latestPost.title}
-              </h2>
-              <div className="mt-2 flex items-baseline gap-3 text-meta text-faint">
-                <time dateTime={latestPost.date}>
-                  {formatDate(latestPost.date)}
-                </time>
-                <span className="text-line">·</span>
-                <span>{latestPost.readingTime} dk okuma</span>
+            <Link
+              href={`/blog/${latestPost.slug}`}
+              className="group flex items-start gap-5 max-md:gap-4"
+            >
+              <PostThumb post={latestPost} />
+              <div className="flex-1 min-w-0">
+                <h2 className="font-blog-serif text-xl font-semibold tracking-tight text-fg leading-snug group-hover:text-fg/80 transition-colors">
+                  {latestPost.title}
+                </h2>
+                <div className="mt-2 flex items-baseline gap-3 text-meta text-faint">
+                  <time dateTime={latestPost.date}>
+                    {formatDate(latestPost.date)}
+                  </time>
+                  <span className="text-line">·</span>
+                  <span>{latestPost.readingTime} dk okuma</span>
+                </div>
+                {latestPost.summary && (
+                  <p className="font-blog-serif mt-3 text-body text-muted">
+                    {latestPost.summary}
+                  </p>
+                )}
               </div>
-              {latestPost.summary && (
-                <p className="font-blog-serif mt-3 text-body text-muted">
-                  {latestPost.summary}
-                </p>
-              )}
             </Link>
             <Link
               href="/blog"
