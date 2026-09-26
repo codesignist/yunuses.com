@@ -28,7 +28,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "gray-matter": "^4.0.3",
     "hast-util-to-jsx-runtime": "^2.3.6",
-    "next": "^16.3.5",
+    "next": "^16.3.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "rehype-external-links": "^3.0.0",
@@ -40,11 +40,11 @@
     "remark-rehype": "^11.1.2",
     "remark-stringify": "^11.0.0",
     "tailwindcss": "^4.3.3",
-    "three": "^0.186.0",
+    "three": "^0.186.1",
     "unified": "^11.0.5"
   },
   "devDependencies": {
-    "eslint": "^10.10.0",
-    "eslint-config-next": "^16.3.5"
+    "eslint": "^10.11.0",
+    "eslint-config-next": "^16.3.6"
   }
 }
