@@ -2,22 +2,15 @@ import {
   N_SEGS,
   CHAIN_DIST,
   BODY_R,
-  Z_AMP,
-  MAX_BEND_COS,
-  MAX_BEND_SIN,
-  FOLLOW_HEAD,
-  FOLLOW_TAIL,
   LIMB_ALIGN_RATE,
   LIMB_REF_MIN,
-  radiusAt,
 } from "./config";
+import { createTrailSolver } from "./trail";
 
 /**
- * Omurga cozumu. Onceki surumde her segment her karede tam olarak CHAIN_DIST
- * mesafeye siniyordu: uzunluk dogru ama eklem acisi aninda yerine oturuyordu,
- * bu da slinky hissi veriyordu. Simdi mesafe hala tam korunuyor ama eklemin
- * donme hizi sinirli ve bu sinir kuyruga dogru azaliyor. Ortaya cikan gecikme
- * kamci hareketini uretiyor.
+ * Omurga: segment durumu ve cerceveler. Segment konumlarini iz takibi
+ * (trail.js) yaziyor; burada tegetler, tup cercevesi ve uzuv cercevesi
+ * turetiliyor.
  */
 export function createSpine() {
   const segs = [];
@@ -35,16 +28,10 @@ export function createSpine() {
       wux: 0, wuy: 1, wuz: 0,
       wrx: 0, wry: 0, wrz: 1,
       ltx: 1, lty: 0, ltz: 0,
-      // ebeveynden bu segmente onceki karedeki yon
-      dx: -1, dy: 0, dz: 0,
       // kumulatif yay uzunlugu, UV icin
       s: i * CHAIN_DIST,
     });
   }
-
-  const headVel = { x: 0, y: 0 };
-  const HEAD_OMEGA = 5.4;
-  const HEAD_ZETA = 0.74;
 
   let totalLength = (N_SEGS - 1) * CHAIN_DIST;
 
@@ -66,83 +53,14 @@ export function createSpine() {
     return _idle;
   }
 
-  function update(now, dt, frames, targetX, targetY) {
-    const head = segs[0];
+  const trail = createTrailSolver(segs);
 
-    // Bas yay ile takip ediyor: kucuk bir asma birakiyor, bu da hareketin
-    // basini "canli" yapan sey.
-    const axx = (targetX - head.x) * HEAD_OMEGA * HEAD_OMEGA - headVel.x * 2 * HEAD_ZETA * HEAD_OMEGA;
-    const ayy = (targetY - head.y) * HEAD_OMEGA * HEAD_OMEGA - headVel.y * 2 * HEAD_ZETA * HEAD_OMEGA;
-    headVel.x += axx * dt;
-    headVel.y += ayy * dt;
-    head.x += headVel.x * dt;
-    head.y += headVel.y * dt;
+  function update(dt, targetX, targetY) {
+    trail.update(dt, targetX, targetY);
+    updateFrames(dt);
+  }
 
-    const tz = now * 0.00095;
-    head.z =
-      Z_AMP *
-      (0.62 * Math.sin(tz) +
-        0.27 * Math.sin(tz * 1.6180339 + 1.3) +
-        0.11 * Math.sin(tz * 2.7182818 + 2.7));
-
-    for (let i = 1; i < N_SEGS; i++) {
-      const a = segs[i - 1];
-      const b = segs[i];
-      const tb = i / (N_SEGS - 1);
-      const cd = CHAIN_DIST * Math.max(0.25, radiusAt(tb) / BODY_R);
-
-      let dirX = b.x - a.x;
-      let dirY = b.y - a.y;
-      let dirZ = b.z - a.z;
-      const dl = Math.hypot(dirX, dirY, dirZ) || 1;
-      dirX /= dl; dirY /= dl; dirZ /= dl;
-
-      let inX, inY, inZ;
-      if (i === 1) {
-        inX = a.tx; inY = a.ty; inZ = a.tz;
-      } else {
-        const aa = segs[i - 2];
-        inX = a.x - aa.x;
-        inY = a.y - aa.y;
-        inZ = a.z - aa.z;
-        const il = Math.hypot(inX, inY, inZ) || 1;
-        inX /= il; inY /= il; inZ /= il;
-      }
-
-      const cosA = inX * dirX + inY * dirY + inZ * dirZ;
-      if (cosA < MAX_BEND_COS) {
-        let axX = inY * dirZ - inZ * dirY;
-        let axY = inZ * dirX - inX * dirZ;
-        let axZ = inX * dirY - inY * dirX;
-        const axL = Math.hypot(axX, axY, axZ);
-        if (axL > 1e-6) {
-          axX /= axL; axY /= axL; axZ /= axL;
-          const kxvX = axY * inZ - axZ * inY;
-          const kxvY = axZ * inX - axX * inZ;
-          const kxvZ = axX * inY - axY * inX;
-          dirX = inX * MAX_BEND_COS + kxvX * MAX_BEND_SIN;
-          dirY = inY * MAX_BEND_COS + kxvY * MAX_BEND_SIN;
-          dirZ = inZ * MAX_BEND_COS + kxvZ * MAX_BEND_SIN;
-        }
-      }
-
-      // Acisal sonumleme. Kuyruga dogru dusen takip katsayisi, eklemi hedef
-      // yonune yavas cevirir; mesafe kisiti sonrasinda tam korundugu icin
-      // govde uzamaz, sadece geriden gelir.
-      const followBase = FOLLOW_HEAD + (FOLLOW_TAIL - FOLLOW_HEAD) * tb;
-      const follow = 1 - Math.pow(1 - followBase, frames);
-      let ndx = b.dx + (dirX - b.dx) * follow;
-      let ndy = b.dy + (dirY - b.dy) * follow;
-      let ndz = b.dz + (dirZ - b.dz) * follow;
-      const nl = Math.hypot(ndx, ndy, ndz) || 1;
-      ndx /= nl; ndy /= nl; ndz /= nl;
-      b.dx = ndx; b.dy = ndy; b.dz = ndz;
-
-      b.x = a.x + ndx * cd;
-      b.y = a.y + ndy * cd;
-      b.z = a.z + ndz * cd;
-    }
-
+  function updateFrames(dt) {
     // Tegetler
     for (let i = 0; i < N_SEGS; i++) {
       const prev = segs[Math.max(0, i - 1)];

@@ -25,7 +25,7 @@ export default function Dragon() {
     activeRef.current = active;
   }, [active]);
 
-  // 1 / 2 / 3 stil degistirir, H tum arayuz kromunu gizler
+  // 1 / 2 / 3 / 4 stil degistirir, H tum arayuz kromunu gizler
   useEffect(() => {
     function onKey(e) {
       if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -228,7 +228,7 @@ export default function Dragon() {
       const targetX = mouse.wx + (idle.x - mouse.wx) * idleBlend;
       const targetY = mouse.wy + (idle.y - mouse.wy) * idleBlend;
 
-      spine.update(now, dt, frames, targetX, targetY);
+      spine.update(dt, targetX, targetY);
       body.update(now);
       mane.update(now, style);
       head.update(now, style);

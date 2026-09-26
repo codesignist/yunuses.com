@@ -19,19 +19,24 @@ export const TAPER_START = 0.62;
 export const IDLE_DELAY = 1500;
 export const Z_AMP = 200;
 
-export const MAX_BEND_RAD = (25 * Math.PI) / 180;
-export const MAX_BEND_COS = Math.cos(MAX_BEND_RAD);
-export const MAX_BEND_SIN = Math.sin(MAX_BEND_RAD);
-
-// Bas hizli takip eder, kuyruk gecikir. Aradaki fark kamci hissini veriyor.
-export const FOLLOW_HEAD = 0.9;
-export const FOLLOW_TAIL = 0.34;
-
 // Uzuvlarin "asagi"ya yonelme hizi (rad/sn) ve dunya referansinin gecerli
 // sayildigi esik. Hiz siniri, govde donerken bacaklarin tek karede ters
 // cevrilmesi yerine yumusak bir yuvarlanmayla duzelmesini sagliyor.
 export const LIMB_ALIGN_RATE = 1.6;
 export const LIMB_REF_MIN = 0.3;
+
+// Iz takibi (trail.js). Govde, kafanin cizdigi yolun uzerinden geciyor;
+// kivrimin siniri eklem acisi degil, kafanin donus yaricapi. Yaricap 55'te
+// eklem basina bukulme ~21-23 derece.
+export const SIM_HZ = 120;
+export const TURN_RADIUS = 55;
+// Kafanin hedef hizi mesafeyle orantili: uzaktaysa hizli, yaklasinca yavas.
+export const HEAD_GAIN = 5.4;
+export const HEAD_ACCEL = 4;
+export const HEAD_MAX_SPEED = 2400;
+// Z dalgasi zamana degil katedilen yola bagli. Zamana bagli olsaydi kafa
+// yerinde dururken inip kalkar, iz dikey bir zikzaga donerdi.
+export const Z_PER_DIST = 0.004;
 
 export function radiusAt(t) {
   if (t >= 0.999) return 0;
