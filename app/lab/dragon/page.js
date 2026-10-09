@@ -7,7 +7,7 @@ export const metadata = experimentMetadata("dragon");
 
 export default function DragonPage() {
   return (
-    <main id="main" className="fixed inset-0 bg-black">
+    <main id="main" data-lab-stage className="fixed inset-0 bg-black">
       <ExperimentSchemas slug="dragon" />
       <LabExitLink />
 

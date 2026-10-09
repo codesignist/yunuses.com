@@ -1,15 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+
+const LIGHT_QUERY = "(prefers-color-scheme: light)";
+
+function storedTheme() {
+  try {
+    return localStorage.getItem("theme");
+  } catch {
+    return null;
+  }
+}
+
+function applyTheme(next) {
+  document.documentElement.setAttribute("data-theme", next);
+  window.dispatchEvent(new CustomEvent("themechange", { detail: next }));
+}
 
 export default function ThemeToggle() {
   const pathname = usePathname();
   const [theme, setTheme] = useState(null);
+  // Depolama engelliyse seçim kaydedilemiyor; bu oturumda elle seçildiyse
+  // sistem teması değişince yine de ezilmesin.
+  const chosen = useRef(false);
 
+  // Hook erken return'den önce, lab sayfalarında da çalışıyor.
   useEffect(() => {
-    const current = document.documentElement.getAttribute("data-theme") || "dark";
-    setTheme(current);
+    const media = window.matchMedia(LIGHT_QUERY);
+    const root = document.documentElement;
+    // Bir hydration hatası kökü yeniden çizerse <html>'deki data-theme
+    // siliniyor ve açık tema koyuya düşüyor; burada geri konuyor.
+    if (!root.getAttribute("data-theme")) {
+      applyTheme(storedTheme() || (media.matches ? "light" : "dark"));
+    }
+    setTheme(root.getAttribute("data-theme"));
+
+    // Tema hiç seçilmemişse sekme açıkken sistem temasını takip et.
+    const onSystemChange = (e) => {
+      if (chosen.current || storedTheme()) return;
+      const next = e.matches ? "light" : "dark";
+      applyTheme(next);
+      setTheme(next);
+    };
+    media.addEventListener("change", onSystemChange);
+    return () => media.removeEventListener("change", onSystemChange);
   }, []);
 
   // Lab'in alt sayfalarında (oyun/deney ekranları) tema toggle gizli — Lab
@@ -18,11 +53,11 @@ export default function ThemeToggle() {
 
   const toggle = () => {
     const next = theme === "light" ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", next);
+    chosen.current = true;
     try {
       localStorage.setItem("theme", next);
     } catch {}
-    window.dispatchEvent(new CustomEvent("themechange", { detail: next }));
+    applyTheme(next);
     setTheme(next);
   };
 

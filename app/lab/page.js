@@ -4,20 +4,18 @@ import ExperimentCover from "components/atoms/ExperimentCover";
 import { getExperiments, stampDate } from "lib/experiments";
 import { SITE_URL } from "lib/identity";
 import { jsonLd } from "lib/jsonLd";
+import { pageMetadata } from "lib/metadata";
 
 const experiments = getExperiments();
 
 const description =
   "Eski ve yeni deneysel çalışmalar. Flash döneminden bugüne kalan minik prototipler, oyunlar ve görsel denemeler.";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Lab",
   description,
-  openGraph: { title: "Lab", description },
-  alternates: {
-    canonical: "/lab/",
-  },
-};
+  path: "/lab/",
+});
 
 const labListSchema = {
   "@context": "https://schema.org",
@@ -62,11 +60,19 @@ export default function LabIndex() {
               className="animate-fade-in-up"
               style={{ animationDelay: `${100 + i * 80}ms` }}
             >
-              <Link href={`/lab/${item.slug}`} className="group block">
+              {/* three.js yukleyen deneylerde lab.json'da prefetch: false var;
+                  yoksa link ekrana girer girmez deneyin ~190 KB JS'i
+                  tiklanmadan iniyordu. */}
+              <Link
+                href={`/lab/${item.slug}`}
+                prefetch={item.prefetch}
+                className="group block"
+              >
                 {item.cover && (
                   <ExperimentCover
                     src={item.cover}
                     sizes="(max-width: 768px) 100vw, 680px"
+                    eager={i === 0}
                   />
                 )}
                 <div className={item.cover ? "mt-4" : ""}>

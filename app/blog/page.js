@@ -2,25 +2,44 @@ import Link from "next/link";
 import BackLink from "components/atoms/BackLink";
 import PostThumb from "components/atoms/PostThumb";
 import { formatDate, getAllPosts } from "lib/posts";
-import { FEED_TYPES } from "lib/metadata";
+import { PERSON, SITE_URL } from "lib/identity";
+import { jsonLd } from "lib/jsonLd";
+import { FEED_TYPES, pageMetadata } from "lib/metadata";
 
 const description = "Yazılım, ürün ve süreç üzerine notlar.";
 
+const page = pageMetadata({ title: "Blog", description, path: "/blog/" });
+
 export const metadata = {
-  title: "Blog",
-  description,
-  openGraph: { title: "Blog", description },
-  alternates: {
-    canonical: "/blog/",
-    types: FEED_TYPES,
-  },
+  ...page,
+  alternates: { ...page.alternates, types: FEED_TYPES },
 };
 
 export default function BlogIndex() {
   const posts = getAllPosts();
 
+  const blogSchema = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    name: "Blog",
+    description,
+    url: `${SITE_URL}/blog/`,
+    inLanguage: "tr-TR",
+    author: PERSON,
+    blogPost: posts.map((post) => ({
+      "@type": "BlogPosting",
+      headline: post.title,
+      url: `${SITE_URL}/blog/${post.slug}/`,
+      datePublished: post.date,
+    })),
+  };
+
   return (
     <main id="main" className="flex-1 page-shell">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(blogSchema) }}
+      />
       <div className="w-full max-w-reading mx-auto">
         <header className="mb-16 max-md:mb-12 animate-fade-in-up">
           <BackLink href="/">Anasayfa</BackLink>

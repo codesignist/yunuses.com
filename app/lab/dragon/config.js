@@ -17,6 +17,10 @@ export const BODY_R = 20;
 export const TAPER_START = 0.62;
 
 export const IDLE_DELAY = 1500;
+// Bosta gezinmenin genligi (dunya birimi). Dar ekranda x genligi
+// Dragon.jsx'te gorunur genislige gore kisiliyor.
+export const IDLE_AMP_X = 560;
+export const IDLE_AMP_Y = 300;
 export const Z_AMP = 200;
 
 // Uzuvlarin "asagi"ya yonelme hizi (rad/sn) ve dunya referansinin gecerli

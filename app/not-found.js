@@ -1,7 +1,16 @@
 import Link from "next/link";
 
+const title = "Sayfa bulunamadı";
+const description = "Aradığın sayfa burada değil.";
+
+// openGraph ve twitter kendi nesneleriyle veriliyor ki ana sayfanin adresi,
+// aciklamasi ve gorseli kirik bir baglantinin onizlemesine tasinmasin. Bos
+// images, kok dizindeki opengraph-image.js'in buraya eklenmesini de kapatiyor.
 export const metadata = {
-  title: "404 — Sayfa bulunamadı",
+  title,
+  description,
+  openGraph: { title, description, images: [] },
+  twitter: { title, description },
 };
 
 export default function NotFound() {

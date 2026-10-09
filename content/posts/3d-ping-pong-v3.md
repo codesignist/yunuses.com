@@ -10,7 +10,7 @@ cover: /blog/3d-ping-pong-v3/game.jpg
 
 Aradan çok uzun zaman geçti. Eski sitemi AI ile minimalist halde yenileyip blog'u da açınca [Lab](/lab) sayfasını neden yeniden hayata geçirmeyeyim dedim. İlk aklıma gelen oyun 3D Ping Pong oldu. AI ile yeniden tasarlayınca hem klasik rakipli modu, hem de eski 3 hakla oynanan modu geliştirdim. Ortaya çok güzel detaylar çıktı. Geliştirdikçe "ripple etkisi neden olmasın", "skor tablosu sayıları digit şeklinde olsun" gibi pek çok küçük fikir aklıma geldi. Sesleri de wav/mp3 kullanmadan doğrudan kodla, saf osilatörlerden ürettim. Sonuç çok güzel oldu.
 
-Aslında bu yazıyı yazma sebebim de bu — oyunun kendisi değil, ona "canlılık" hissi veren küçük detaylar.
+Aslında bu yazıyı yazma sebebim de bu: oyunun kendisi değil, ona "canlılık" hissi veren küçük detaylar.
 
 ![3D Ping Pong oyunundan bir kare](/blog/3d-ping-pong-v3/game.jpg)
 
@@ -30,13 +30,13 @@ HUD'a modern bir sayı fontu yerine bilerek eski hesap makinesi/scoreboard estet
 
 ## Çarpışmanın ağırlığı
 
-Top duvara çarptığında iki şey oluyor: kamera bir an titriyor — yan duvarlarda yatay, ön/arka duvarda derinliksel — ve çarpma noktasından genişleyen halkalar yayılıyor. Halkalar duvar köşesine yakınsa "kırılıyormuş" gibi görünüyor; köşeden sekip yansıyan bir dalganın hissi. Detayların belki en çok yorulduğum kısmı buydu, ama olmasaydı oyun çok daha "boş" hissedilirdi.
+Top duvara çarptığında iki şey oluyor: kamera bir an titriyor ve çarpma noktasından genişleyen halkalar yayılıyor. Halkalar duvar köşesine yakınsa "kırılıyormuş" gibi görünüyor; köşeden sekip yansıyan bir dalganın hissi. Detayların belki en çok yorulduğum kısmı buydu, ama olmasaydı oyun çok daha "boş" hissedilirdi.
 
-![Duvara çarpma anındaki ripple efekti](/blog/3d-ping-pong-v3/riplle.gif)
+<video src="/blog/3d-ping-pong-v3/ripple.mp4" width="300" height="300" autoplay muted loop playsinline controls aria-label="Duvara çarpma anındaki ripple efekti">Duvara çarpma anındaki ripple efekti</video>
 
 ## Hit flash ve miss flash
 
-Top rakete değdiğinde raket bir an parlıyor — mavi ya da kırmızı, kim vurduysa. Skor olduğunda tüm ekran o tarafın rengiyle 80 milisaniye parlıyor. Geri bildirim olmazsa dijital oyunlar duygusuz hissettiriyor; "bir şey oldu" sinyalini vermek lazım.
+Top rakete değdiğinde raket bir an parlıyor: mavi ya da kırmızı, kim vurduysa. Skor olduğunda tüm ekran o tarafın rengiyle kısa bir an parlayıp sönüyor. Geri bildirim olmazsa dijital oyunlar duygusuz hissettiriyor; "bir şey oldu" sinyalini vermek lazım.
 
 ## Spawn ve iz
 
@@ -44,14 +44,14 @@ Top ekranda birden belirmiyor. Bir noktadan büyüyerek + halka açılarak doğu
 
 ## Müzik değil, ritim
 
-Web Audio API ile saf osilatörden 0.05-0.2 saniyelik kısa pip'ler. Çarpma, skor, kayıp can, ateş — hepsi farklı tonlarda. Müzik yok, çünkü pong'a fon değil ritim lazım. Sessize alma butonu da var; herkes ofiste oynamak istemeyebilir.
+Web Audio API ile saf osilatörden 0.05-0.2 saniyelik kısa pip'ler. Çarpma, skor, kayıp can, ateş: hepsi farklı tonlarda. Müzik yok, çünkü pong'a fon değil ritim lazım. Sessize alma butonu da var; herkes ofiste oynamak istemeyebilir.
 
 ## İki mod
 
 - **Süre**: 90 saniye, klasik rakipli. En çok skoru toplayan kazanır.
-- **Arena**: 3 hak, top kaçırma yok — onun yerine ateş et, AI'yı yavaşlat, hayatta kal.
+- **Arena**: 3 hak, top kaçırma yok. Onun yerine ateş et, AI'yı yavaşlat, hayatta kal.
 
-İkincisi v2'den kalıntı. Tutamadım, geri getirdim — çünkü "klasik ama kişisel" oluyor.
+İkincisi v2'den kalıntı. Tutamadım, geri getirdim, çünkü "klasik ama kişisel" oluyor.
 
 ---
 

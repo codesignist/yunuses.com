@@ -4,6 +4,8 @@ import {
   BODY_R,
   LIMB_ALIGN_RATE,
   LIMB_REF_MIN,
+  IDLE_AMP_X,
+  IDLE_AMP_Y,
 } from "./config";
 import { createTrailSolver } from "./trail";
 
@@ -48,8 +50,8 @@ export function createSpine() {
   const _idle = { x: 0, y: 0 };
   function idleTarget(now) {
     const t = now * 0.001;
-    _idle.x = 560 * drift(t, 0.29, 0.0);
-    _idle.y = 300 * drift(t, 0.34, 1.7);
+    _idle.x = IDLE_AMP_X * drift(t, 0.29, 0.0);
+    _idle.y = IDLE_AMP_Y * drift(t, 0.34, 1.7);
     return _idle;
   }
 

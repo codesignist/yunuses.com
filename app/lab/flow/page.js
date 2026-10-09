@@ -7,7 +7,7 @@ export const metadata = experimentMetadata("flow");
 
 export default function FlowPage() {
   return (
-    <main id="main" className="fixed inset-0 bg-black">
+    <main id="main" data-lab-stage className="fixed inset-0 bg-black">
       <ExperimentSchemas slug="flow" />
       <LabExitLink />
 

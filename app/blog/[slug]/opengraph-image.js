@@ -1,11 +1,16 @@
 import { ImageResponse } from "next/og";
+import { notFound } from "next/navigation";
 import fs from "node:fs";
 import path from "node:path";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
 
-export const alt = "Yunus Eş — Blog";
+export const alt = "Yunus Eş · Blog";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+// Sayfadaki gibi: bilinmeyen slug icin genel bir gorsel uretip diske
+// yazmak yerine 404.
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
@@ -14,6 +19,7 @@ export function generateStaticParams() {
 export default async function Image({ params }) {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
+  if (!post || post.draft) notFound();
 
   const avatarBuffer = fs.readFileSync(
     path.join(process.cwd(), "public", "avatar.png"),
@@ -42,7 +48,7 @@ export default async function Image({ params }) {
             textTransform: "uppercase",
           }}
         >
-          Yunus Eş — Blog
+          Yunus Eş · Blog
         </div>
 
         <div
@@ -56,7 +62,7 @@ export default async function Image({ params }) {
             flex: 1,
           }}
         >
-          {post?.title ?? "Yazı"}
+          {post.title}
         </div>
 
         <div
@@ -67,8 +73,11 @@ export default async function Image({ params }) {
             marginTop: 40,
           }}
         >
+          {/* next/og yalnız düz <img> anlıyor. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={avatarSrc}
+            alt=""
             width={64}
             height={64}
             style={{ borderRadius: "50%", objectFit: "cover" }}
@@ -77,8 +86,8 @@ export default async function Image({ params }) {
             <div style={{ fontSize: 26, color: "#fafafa" }}>Yunus Eş</div>
             <div style={{ fontSize: 22, color: "#6b6b6b", marginTop: 4 }}>
               {[
-                post?.date ? formatDate(post.date) : null,
-                post?.readingTime ? `${post.readingTime} dk okuma` : null,
+                post.date ? formatDate(post.date) : null,
+                post.readingTime ? `${post.readingTime} dk okuma` : null,
               ]
                 .filter(Boolean)
                 .join(" · ")}

@@ -63,13 +63,21 @@ export function createPost(renderer, scene, camera) {
       samples: 4,
     }),
   );
+  // renderTarget2 yukaridaki hedefin kopyasi, MSAA onda kaliyor. Sahne her
+  // karede oraya ciziliyor: RenderPass ve bloom takas yapmiyor, OutputPass
+  // ve grade birer kez yapiyor, kare basina iki takas. renderTarget1'e
+  // yalniz OutputPass'in tam ekran ciktisi yaziliyor, MSAA orada bos yere
+  // GPU bellegi yiyordu. Bir gecis eklenir ya da kapatilirsa takas sayisi
+  // tek olur ve sahne MSAA'siz hedefe duser; o zaman burasi da degismeli.
+  composer.renderTarget1.samples = 0;
 
   composer.addPass(new RenderPass(scene, camera));
 
   const bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.6, 0.5, 0.6);
   composer.addPass(bloom);
 
-  composer.addPass(new OutputPass());
+  const outputPass = new OutputPass();
+  composer.addPass(outputPass);
 
   const grade = new ShaderPass(GradeShader);
   composer.addPass(grade);
@@ -90,9 +98,51 @@ export function createPost(renderer, scene, camera) {
     composer.render();
   }
 
-  function dispose() {
-    composer.dispose();
+  // Program anahtari geometrinin hangi attribute'lari tasidigina da bakiyor.
+  // Gecislerin tam ekran ucgeninde konum var, normal yok; on derleme
+  // geometrisi de oyle olmali, yoksa ilk karede yeniden derleniyor.
+  const compileGeo = new THREE.BufferGeometry();
+  compileGeo.setAttribute("position", new THREE.Float32BufferAttribute([-1, 3, 0, -1, -1, 0, 3, -1, 0], 3));
+  function meshesOf(materials) {
+    const group = new THREE.Group();
+    for (const m of materials) group.add(new THREE.Mesh(compileGeo, m));
+    return group;
   }
 
-  return { applyStyle, setSize, render, dispose };
+  // Sahnenin ve gecislerin shader'larini ana thread'i kilitlemeden derler.
+  // three programi cizilen hedefe gore (ton esleme, cikis renk uzayi) farkli
+  // derliyor; on derleme de ayni hedef bagliyken yapilmali, yoksa ilk karede
+  // hepsi yeniden derleniyor. Sahne ve bloom hedeflere, grade ekrana ciziyor.
+  // OutputPass'in define'lari ilk render'inda kuruldugu icin onceden
+  // derlenemiyor; tek ve kucuk bir program, ilk karede derleniyor.
+  function compile() {
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(composer.readBuffer);
+    const ready = [
+      renderer.compileAsync(scene, camera),
+      renderer.compileAsync(
+        meshesOf([
+          bloom.materialHighPassFilter,
+          ...bloom.separableBlurMaterials,
+          bloom.compositeMaterial,
+          bloom.blendMaterial,
+        ]),
+        camera,
+      ),
+    ];
+    renderer.setRenderTarget(null);
+    ready.push(renderer.compileAsync(meshesOf([grade.material]), camera));
+    renderer.setRenderTarget(prev);
+    return Promise.all(ready);
+  }
+
+  function dispose() {
+    bloom.dispose();
+    outputPass.dispose();
+    grade.dispose();
+    composer.dispose();
+    compileGeo.dispose();
+  }
+
+  return { applyStyle, setSize, render, compile, dispose };
 }

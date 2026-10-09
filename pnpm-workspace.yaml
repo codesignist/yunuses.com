@@ -1,3 +1,8 @@
 allowBuilds:
   sharp: true
   unrs-resolver: true
+
+# next sharp'i ^0.35.4 ile istiyor, lockfile de 0.35.4'te kaliyordu.
+# 0.35.5 paketle gelen librsvg'deki acigi kapatiyor (GHSA-wq5f-xc86-pv6w).
+overrides:
+  sharp: ^0.35.5

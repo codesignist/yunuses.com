@@ -5,18 +5,16 @@ import lessons from "data/lessons.json";
 import types from "data/types.json";
 import { PERSON, SITE_URL } from "lib/identity";
 import { jsonLd } from "lib/jsonLd";
+import { pageMetadata } from "lib/metadata";
 
 const description =
   "Sıfırdan FrontEnd Developer'lığa: 1 Ağustos 2022'de başlayıp tamamlanan ücretsiz uygulamalı eğitim programı.";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Zero to Hero",
   description,
-  openGraph: { title: "Zero to Hero", description },
-  alternates: {
-    canonical: "/zero-to-hero/",
-  },
-};
+  path: "/zero-to-hero/",
+});
 
 const H2 = ({ children }) => (
   <h2 className="mt-16 mb-6 text-xl font-medium tracking-tight text-fg">
@@ -29,7 +27,7 @@ const technologies = [
   "CSS",
   "JavaScript",
   "React",
-  "Next.js (Silindi)",
+  "Next.js",
   "git",
   "npm",
   "CLI",
@@ -76,7 +74,7 @@ const achievements = [
   "Araştırma becerisi",
   "Problem çözme becerisi",
   "Dokümantasyon okuma becerisi",
-  "Teknoloji okur yazarlığı",
+  "Teknoloji okuryazarlığı",
   "Diğer yazılım dillerinin önünün açılması",
 ];
 
@@ -89,7 +87,7 @@ const faq = [
   },
   {
     q: "Canlı yayın kayıtları hâlâ izlenebiliyor mu?",
-    a: "Evet. Tüm dersler YouTube kanalında kayıtlı; istediğin zaman izleyebilirsin.",
+    a: "Evet. Bazı Next.js dersleri dışında tüm dersler YouTube kanalında kayıtlı; istediğin zaman izleyebilirsin.",
   },
   { q: "Eğitim hangi programlama dili üzerinden işlendi?", a: "JavaScript" },
   {
@@ -138,9 +136,9 @@ export default function ZeroToHero() {
           <p>
             En temel bilgisayar kullanımından başlayıp gelişmiş web sistemleri
             yapacak seviyeye uygulamalı olarak birlikte çıktık. HTML, CSS, JS
-            konularını ödevlerle en uygun hızda temellendirip, Next.js
-            (silindi), React, npm gibi teknolojileri kullanarak modern
-            JavaScript dünyasına geçiş yaptık. Sıfırdan başlayan seçili bir kaç
+            konularını ödevlerle en uygun hızda temellendirip, Next.js,
+            React, npm gibi teknolojileri kullanarak modern
+            JavaScript dünyasına geçiş yaptık. Sıfırdan başlayan seçili birkaç
             öğrenciyle ekran paylaşımı da yaparak sınıf ortamını canlı yayında
             izleyicilerle buluşturduk. Ayrıca teorik konuları hızla geçip,
             gerçek web uygulamalarını açık kaynak kodlu olarak birlikte yaptık.
@@ -151,7 +149,7 @@ export default function ZeroToHero() {
           <p>
             1 Ağustos 2022 Pazartesi başladık ve programı eksiksiz tamamladık.
             <br />
-            Tüm ders kayıtları YouTube kanalında erişilebilir durumda.
+            Bazı Next.js dersleri dışında tüm kayıtlar YouTube kanalında.
           </p>
         </div>
 
@@ -187,9 +185,9 @@ export default function ZeroToHero() {
           <p>
             Dersler önceden belirlenmiş öğrencilere uygulamalı anlatımla
             işlendi; YouTube canlı yayını üzerinden de diğer katılımcıların
-            izlemesi ve yorumlarla derse katılması sağlandı. Tüm dersler
-            kayıtlı olduğu için aşağıdaki kanal üzerinden istediğin zaman
-            izleyebilirsin.
+            izlemesi ve yorumlarla derse katılması sağlandı. Bazı Next.js
+            dersleri dışında tüm dersler kayıtlı; aşağıdaki kanal üzerinden
+            istediğin zaman izleyebilirsin.
           </p>
         </div>
         <div className="mt-5 flex flex-wrap gap-2">

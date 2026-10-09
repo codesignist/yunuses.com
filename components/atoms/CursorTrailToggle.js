@@ -52,7 +52,9 @@ export default function CursorTrailToggle() {
     <button
       type="button"
       onClick={toggle}
-      aria-label={enabled ? "İmleç izini kapat" : "İmleç izini aç"}
+      // Basılı durumu aria-pressed söylüyor; etiket sabit kalmalı, yoksa
+      // ekran okuyucu "İmleç izini aç, basılı değil" gibi çelişkili okuyor.
+      aria-label="İmleç izi"
       title={enabled ? "İmleç izini kapat" : "İmleç izini aç"}
       aria-pressed={enabled}
       data-chrome

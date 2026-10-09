@@ -32,6 +32,6 @@ Mümkün olduğunca minimalist ilerlemeye çalıştım, çünkü:
 
 Güzel oldu bu söz, içimden geldi. :)
 
-Yorumlama, paylaşım gibi şeyler de şimdilik yok. Bunu artık sosyal medya üzerinden yapabiliyoruz. Bu blogun amacı herkesle konuşmak değil, düşüncelerimi yazıp arşivlemek.
+Yorum bölümü şimdilik yok. Yazıları alttaki Paylaş düğmesiyle ya da sosyal medyada paylaşabilirsiniz. Bu blogun amacı herkesle konuşmak değil, düşüncelerimi yazıp arşivlemek.
 
 Sonraki yazılarda görüşmek üzere.

@@ -4,21 +4,45 @@ import ExperimentCover from "components/atoms/ExperimentCover";
 import PostThumb from "components/atoms/PostThumb";
 import { getLatestExperiment, stampDate } from "lib/experiments";
 import { formatDate, getAllPosts } from "lib/posts";
-import { PERSON } from "lib/identity";
+import { PERSON, PERSON_ID, SITE_URL } from "lib/identity";
 import { jsonLd } from "lib/jsonLd";
-import { FEED_TYPES } from "lib/metadata";
+import {
+  FEED_TYPES,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  pageMetadata,
+} from "lib/metadata";
 import Link from "next/link";
 
+// Kok dizindeki opengraph-image.js ana sayfaya dosya olarak ayrica ekleniyor
+// ve adresi sonda egik cizgi olmadan, once 308'e dusen haliyle yaziyor.
+// Gorsel burada acikca veriliyor; sayfa duzeyindeki openGraph kokunkinin
+// yerine gectigi icin geri kalan alanlar da pageMetadata'dan geliyor.
+const page = pageMetadata({
+  title: { absolute: SITE_NAME },
+  description: SITE_DESCRIPTION,
+  path: "/",
+});
+
 export const metadata = {
-  alternates: {
-    canonical: "/",
-    types: FEED_TYPES,
-  },
+  ...page,
+  alternates: { ...page.alternates, types: FEED_TYPES },
 };
 
 const personSchema = {
   "@context": "https://schema.org",
   ...PERSON,
+};
+
+// Google site adini oncelikle WebSite kaydindan aliyor; yoksa baslik ve
+// og:site_name gibi isaretlerden tahmin ediyor.
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: `${SITE_URL}/`,
+  inLanguage: "tr-TR",
+  publisher: { "@id": PERSON_ID },
 };
 
 export default function Home() {
@@ -30,6 +54,10 @@ export default function Home() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(personSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(websiteSchema) }}
       />
       <div className="w-full max-w-intro">
         <div className="flex items-center gap-6">
@@ -99,7 +127,7 @@ export default function Home() {
               className="link-inline"
             >
               lab
-            </Link>&apos;deki oyun ve deneyleri{" "}
+            </Link>&apos;daki oyun ve deneyleri{" "}
             inceleyebilirsiniz.
           </p>
         </div>
@@ -150,8 +178,14 @@ export default function Home() {
           >
             <div className="eyebrow mb-4">Son deney</div>
             {/* Blogun aksine deneyin anlatacagi seyi gorselin kendisi
-                anlatiyor; burada ozet yok, kapak ve ad yetiyor. */}
-            <Link href={`/lab/${latestExperiment.slug}`} className="group block">
+                anlatiyor; burada ozet yok, kapak ve ad yetiyor. three.js
+                yukleyen deneylerde prefetch kapali (lab.json), yoksa kart
+                ekrana girince deneyin JS'i tiklanmadan iniyordu. */}
+            <Link
+              href={`/lab/${latestExperiment.slug}`}
+              prefetch={latestExperiment.prefetch}
+              className="group block"
+            >
               {latestExperiment.cover && (
                 <ExperimentCover
                   src={latestExperiment.cover}

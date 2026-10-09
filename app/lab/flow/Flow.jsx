@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import useLabKeys from "lib/useLabKeys";
 
 const VELOCITY_DISSIPATION = 0.6;
 // Dye multiplicative decay — RGBA16F precision yeterli olduğu için exponential
@@ -16,6 +17,9 @@ const MODES = [
   { id: "ice", label: "Buz" },
   { id: "chaos", label: "Kaos" },
 ];
+// useLabKeys sabit bir dizi istiyor, her render'da yeni dizi dinleyiciyi
+// yeniden kurardı.
+const MODE_IDS = MODES.map((m) => m.id);
 // Çok yüksek DPR ekranlarda fragment shader yükünü kontrol altında tutmak için
 // uzun kenar buradan aşılırsa orantılı küçültürüz.
 const MAX_LONG_SIDE = 1920;
@@ -197,6 +201,12 @@ export default function Flow() {
   // üzerinden anlık değer okunabiliyor.
   const modeRef = useRef("spectrum");
   useEffect(() => { modeRef.current = mode; }, [mode]);
+  // Dragon ve Attractors'taki ortak klavye: 1-4 mod seçer, H arayüzü gizler.
+  useLabKeys(MODE_IDS, setMode);
+  // WebGL bağlamı kaybolup geri gelince (sürücü sıfırlanması, GPU süreci
+  // çökmesi, mobilde arka plandan dönüş) her şeyi baştan kurmak için
+  // effect'i bu sayaçla yeniden çalıştırıyoruz.
+  const [ctxGen, setCtxGen] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -503,6 +513,21 @@ export default function Flow() {
     const ro = new ResizeObserver(() => resize());
     ro.observe(canvas);
 
+    // preventDefault olmadan tarayıcı bağlamı geri vermiyor ve deney sayfa
+    // yenilenene kadar boş kalıyordu. Geri gelince program, VAO ve FBO'lar
+    // effect yeniden çalışarak baştan kuruluyor.
+    let lost = false;
+    function onContextLost(e) {
+      e.preventDefault();
+      lost = true;
+      cancelAnimationFrame(raf);
+    }
+    function onContextRestored() {
+      setCtxGen((g) => g + 1);
+    }
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
+
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -511,6 +536,11 @@ export default function Flow() {
       canvas.removeEventListener("pointerup", pointerUp);
       canvas.removeEventListener("pointercancel", pointerUp);
       canvas.removeEventListener("pointerleave", pointerUp);
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      canvas.removeEventListener("webglcontextrestored", onContextRestored);
+      // Kaybolan bağlamın nesneleri onunla birlikte gitti; silmeye çalışmak
+      // yalnızca konsola uyarı düşürür.
+      if (lost) return;
       disposeDoubleFBO(velocity);
       disposeDoubleFBO(dye);
       gl.deleteProgram(splatProgram);
@@ -519,7 +549,7 @@ export default function Flow() {
       gl.deleteBuffer(quad);
       gl.deleteVertexArray(vao);
     };
-  }, []);
+  }, [ctxGen]);
 
   return (
     <>
@@ -527,39 +557,45 @@ export default function Flow() {
         ref={canvasRef}
         className="absolute inset-0 w-full h-full touch-none"
         style={{ cursor: "crosshair" }}
+        role="img"
+        aria-label="Akışkan simülasyonu"
       />
       {unsupported && (
         <div className="absolute inset-0 flex items-center justify-center text-white/70 text-sm px-6 text-center">
-          Bu deney WebGL2 ve float texture desteği gerektiriyor — tarayıcın
-          desteklemiyor gibi görünüyor.
+          Tarayıcın bu deneyi çalıştıramıyor. Başka bir tarayıcıda ya da cihazda dene.
         </div>
       )}
+      {/* data-chrome: sunucuda da çiziliyor, sayfanın markdown'ına girmesin. */}
       {hintVisible && !unsupported && (
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/60 text-[16px] max-md:text-[14px] tracking-wide animate-fade-in-up">
+        <div data-chrome className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/60 text-[16px] max-md:text-[14px] tracking-wide animate-fade-in-up">
           Sürükleyerek başla
         </div>
       )}
       {!unsupported && (
         <div
-          role="radiogroup"
+          data-chrome
+          role="group"
           aria-label="Renk modu"
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm"
         >
+          {/* Önceden radyo grubuydu ama radyonun beklenen ok tuşu gezinmesi
+              yoktu; LabOptionBar'daki basılı düğme düzenine geçildi. Yüksek
+              kontrast modunda seçili arka plan sistem rengine dönüp
+              kaybolduğu için seçiliye orada çerçeve ekleniyor. */}
           {MODES.map((m) => {
             const active = mode === m.id;
             return (
               <button
                 key={m.id}
                 type="button"
-                role="radio"
-                aria-checked={active}
+                aria-pressed={active}
                 onClick={() => {
                   setMode(m.id);
                   setHintVisible(false);
                 }}
                 className={`px-3 py-1.5 rounded-full text-[12px] tracking-wide transition ${
                   active
-                    ? "bg-white/20 text-white"
+                    ? "bg-white/20 text-white forced-colors:outline-2 forced-colors:-outline-offset-2"
                     : "text-white/60 hover:text-white/90"
                 }`}
               >

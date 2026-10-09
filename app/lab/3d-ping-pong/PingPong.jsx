@@ -29,9 +29,14 @@ const SAFE_MARGIN = 0.88;
 const SPAWN_DURATION = 700;
 const TRAIL_MAX = 8;
 
+// Fizik adımı (ms) ve kare başına en fazla adım. Yavaş cihazda uzun kare bu
+// dilimlere bölünür; top yavaşlamaz, büyük adımda da duvardan kaçmaz.
+const STEP_MS = 33;
+const MAX_STEPS = 4;
+
 // Bir tur süresi (ms) — sonunda oyun biter ve paylaşım ekranı çıkar
 const GAME_DURATION = 90000;
-const SHARE_URL = "https://yunuses.com/lab/3d-ping-pong";
+const SHARE_URL = "https://yunuses.com/lab/3d-ping-pong/";
 
 // Modlar
 const MODE_TIME = "time";
@@ -47,15 +52,18 @@ const AI_STUN_MS = 280;
 
 // =====================================================================
 // Web Audio — küçük programatik beep'ler. Asset yok, tek osilatör senteziyle
-// klasik arcade ses paleti. AudioContext ilk user gesture'da uyanır.
+// klasik arcade ses paleti. AudioContext BAŞLA'da (ya da sesi açınca), yani
+// bir user gesture içinde açılıp uyanır.
 // =====================================================================
 
 let _audioCtx = null;
 let _audioMuted = false;
 
+// Çerezler tamamen engelliyken localStorage'a bakmak bile hata atıyor;
+// typeof kontrolü de bu yüzden try içinde.
 function loadMutedFromStorage() {
-  if (typeof localStorage === "undefined") return false;
   try {
+    if (typeof localStorage === "undefined") return false;
     return localStorage.getItem("pingpong_muted") === "1";
   } catch {
     return false;
@@ -63,8 +71,8 @@ function loadMutedFromStorage() {
 }
 
 function persistMuted(m) {
-  if (typeof localStorage === "undefined") return;
   try {
+    if (typeof localStorage === "undefined") return;
     localStorage.setItem("pingpong_muted", m ? "1" : "0");
   } catch {}
 }
@@ -86,6 +94,19 @@ function getAudioCtx() {
     }
   }
   return _audioCtx;
+}
+
+// Tarayıcı ses altyapısını ilk açışta ana thread'i kısa süre kilitleyebiliyor.
+// Bu bedel oyunun ortasında, ilk vuruşta değil, tıklama anında ödensin. Safari
+// de sesi ancak bir user gesture içinde açılan ya da uyanan bağlamla çalıyor.
+function wakeAudio() {
+  if (_audioMuted) return;
+  const ctx = getAudioCtx();
+  if (ctx && ctx.state === "suspended") {
+    try {
+      ctx.resume();
+    } catch {}
+  }
 }
 
 function blip(freq, duration, type = "sine", gain = 0.14, glide = 0) {
@@ -335,11 +356,13 @@ function SevenSegDigit({ char, height = 62, rgb }) {
     return `M${x1} ${y1 + half} L${x1 + half} ${y1} L${x2} ${y1 + half} L${x2} ${y2 - half} L${x1 + half} ${y2} L${x1} ${y2 - half} Z`;
   };
 
+  // Kısa ekranda (yatay telefon) rakamlar küçülüyor; viewBox oranı koruyor
   return (
     <svg
       width={w}
       height={h}
       viewBox={`0 0 ${w} ${h}`}
+      className="[@media(max-height:480px)]:h-10 [@media(max-height:480px)]:w-auto"
       style={{ display: "block", overflow: "visible" }}
       aria-hidden="true"
     >
@@ -371,7 +394,7 @@ function ScoreBlock({ value, rgb, label, digits = 2 }) {
   return (
     <div className="flex flex-col items-center">
       <div
-        className="flex gap-1.5 px-4 py-3 rounded-md border"
+        className="flex gap-1.5 px-4 py-3 rounded-md border [@media(max-height:480px)]:py-2"
         style={{
           background: `rgba(${rgb}, ${isPlaceholder ? 0.03 : 0.06})`,
           borderColor: `rgba(${rgb}, ${isPlaceholder ? 0.18 : 0.28})`,
@@ -384,9 +407,11 @@ function ScoreBlock({ value, rgb, label, digits = 2 }) {
           <SevenSegDigit key={i} char={d} height={62} rgb={rgb} />
         ))}
       </div>
+      {/* Etiket her iki durumda aynı tonda: daha soluğu kırmızıda (CPU)
+          okunurluk eşiğinin altına düşüyor */}
       <div
-        className="mt-2.5 text-[10px] tracking-[0.4em] font-mono"
-        style={{ color: `rgba(${rgb}, ${isPlaceholder ? 0.45 : 0.75})` }}
+        className="mt-2.5 text-[10px] tracking-[0.4em] font-mono [@media(max-height:480px)]:mt-1.5"
+        style={{ color: `rgba(${rgb}, 0.85)` }}
       >
         {label}
       </div>
@@ -400,11 +425,9 @@ export default function PingPong() {
   const [score, setScore] = useState({ player: 0, ai: 0 });
   const [running, setRunning] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [, setTimeLeft] = useState(GAME_DURATION);
   const [copied, setCopied] = useState(false);
   const [muted, setMuted] = useState(false);
   const [mode, setMode] = useState(MODE_TIME);
-  const [lives, setLives] = useState(SURVIVAL_LIVES);
   const stateRef = useRef(null);
 
   useEffect(() => {
@@ -426,14 +449,19 @@ export default function PingPong() {
     try {
       localStorage.setItem("pingpong_mode", m);
     } catch {}
-    // HUD canvas tarafı state.mode'a bakıyor — anında senkronize et
-    if (stateRef.current) stateRef.current.mode = m;
+    // HUD canvas tarafı state.mode'a bakıyor — anında senkronize et ve
+    // panel arkasındaki sahneyi bir kez yeniden çizdir
+    if (stateRef.current) {
+      stateRef.current.mode = m;
+      stateRef.current.dirty = true;
+    }
   };
 
   const toggleMute = () => {
     const next = !muted;
     setAudioMuted(next);
     setMuted(next);
+    if (!next) wakeAudio();
   };
 
   // Oyun mantığı + render
@@ -485,9 +513,14 @@ export default function PingPong() {
       aiStun: 0,
       playerX: 0,
       playerY: 0,
+      // Panel açıkken sahne yalnızca bir şey değiştiğinde yeniden çizilir
+      dirty: true,
+      camMoving: false,
     };
 
     stateRef.current = state;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const dpr = () => Math.min(window.devicePixelRatio || 1, 2);
 
@@ -514,6 +547,8 @@ export default function PingPong() {
       canvas.style.width = w + "px";
       canvas.style.height = h + "px";
       ctx.setTransform(r, 0, 0, r, 0, 0);
+      // Boyut değişince canvas temizleniyor; panel açıkken de yeniden çiz
+      state.dirty = true;
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -527,6 +562,7 @@ export default function PingPong() {
       const ny = ((cy - rect.top) / rect.height) * 2 - 1;
       state.mouse.x = Math.max(-1, Math.min(1, nx));
       state.mouse.y = Math.max(-1, Math.min(1, ny));
+      state.dirty = true;
     };
 
     const onMouseMove = (e) => setMouse(e.clientX, e.clientY);
@@ -543,7 +579,9 @@ export default function PingPong() {
       state.score.ai = 0;
       setScore({ player: 0, ai: 0 });
       state.gameTime = 0;
-      setTimeLeft(GAME_DURATION);
+      // Saat sıfırdan başlasın; BAŞLA'daki ses açılışı gibi bir takılma
+      // turun ilk saniyelerinden yemesin
+      last = performance.now();
       state.gameOver = false;
       setGameOver(false);
       state.speedMult = 1;
@@ -554,15 +592,17 @@ export default function PingPong() {
       state.bulletPending = false;
       state.aiStun = 0;
       state.lives = SURVIVAL_LIVES;
-      setLives(SURVIVAL_LIVES);
       state.running = true;
       setRunning(true);
       resetBall(1);
     };
 
+    // Fare ve dokunuş tek olaydan geliyor. Eskiden click + touchstart vardı;
+    // uzun tutulan bir dokunuşun ardından gelen click ikinci mermiyi atıyordu.
     const onStart = (e) => {
-      if (e.touches && e.touches[0])
-        setMouse(e.touches[0].clientX, e.touches[0].clientY);
+      if (e.button !== 0) return; // sağ/orta tık ateş etmesin
+      if (e.pointerType !== "mouse" && e.isPrimary)
+        setMouse(e.clientX, e.clientY);
       // Survival modunda oyun çalışırken tıklama → ateş tetiklemesi
       if (state.running && state.mode === MODE_SURVIVAL) {
         if (state.bulletCooldownT <= 0) state.bulletPending = true;
@@ -571,8 +611,7 @@ export default function PingPong() {
 
     canvas.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("touchmove", onTouchMove, { passive: false });
-    canvas.addEventListener("click", onStart);
-    canvas.addEventListener("touchstart", onStart, { passive: true });
+    canvas.addEventListener("pointerdown", onStart);
 
     const onExternalRestart = (e) => {
       const m = e && e.detail && e.detail.mode ? e.detail.mode : state.mode;
@@ -829,6 +868,8 @@ export default function PingPong() {
     }
 
     function addShake(impactSpeed) {
+      // "Hareketi azalt" açıksa kamera sarsılmasın; ripple ve sesler kalıyor
+      if (reducedMotion.matches) return;
       state.shakePower = Math.min(
         20,
         state.shakePower + impactSpeed * 0.55 + 0.5
@@ -933,8 +974,52 @@ export default function PingPong() {
 
     function tick(now) {
       raf = requestAnimationFrame(tick);
-      const dt = Math.min(33, now - last);
+      // Süre gerçek geçen zamanla akar; 250 ms sınırı sekmeye dönüşteki
+      // büyük boşluk için. Yavaş cihazda tur uzamasın, skorlar
+      // karşılaştırılabilir kalsın.
+      const raw = Math.max(0, Math.min(250, now - last));
       last = now;
+
+      // Sadece time mode'da süre saymakta
+      if (state.running && state.mode === MODE_TIME) {
+        state.gameTime += raw;
+        const remaining = Math.max(0, GAME_DURATION - state.gameTime);
+        if (remaining <= 0) {
+          state.running = false;
+          state.gameOver = true;
+          setRunning(false);
+          setGameOver(true);
+          SFX.gameOver();
+        }
+      } else if (state.running && state.mode === MODE_SURVIVAL) {
+        // Survival'da da gameTime artıyor (skor için kullanmıyoruz, ama
+        // shake/spawn timer animasyonları için tutarlılık)
+        state.gameTime += raw;
+      }
+
+      const steps = Math.min(MAX_STEPS, Math.max(1, Math.ceil(raw / STEP_MS)));
+      const dt = Math.min(STEP_MS, raw / steps);
+      for (let i = 0; i < steps; i++) update(dt);
+
+      // Panel açıkken sahne bulanık zeminin arkasında neredeyse görünmüyor.
+      // Oyun dışında yalnızca bir şey değiştiğinde ya da efektler sönerken çiz.
+      if (
+        state.running ||
+        state.dirty ||
+        state.camMoving ||
+        state.spawnT > 0 ||
+        state.ripples.length > 0 ||
+        state.shakePower > 0.05 ||
+        Math.abs(state.shakeX) + Math.abs(state.shakeY) > 0.05 ||
+        state.hitFlash + state.aiHitFlash + state.missFlash + state.scoreFlash >
+          0.01
+      ) {
+        state.dirty = false;
+        render(state.playerX, state.playerY);
+      }
+    }
+
+    function update(dt) {
       const t = dt / 16.67;
 
       const targetYaw = state.mouse.x * 0.1;
@@ -942,6 +1027,10 @@ export default function PingPong() {
       const ease = 1 - Math.pow(0.86, t);
       state.cam.yaw += (targetYaw - state.cam.yaw) * ease;
       state.cam.pitch += (targetPitch - state.cam.pitch) * ease;
+      state.camMoving =
+        Math.abs(targetYaw - state.cam.yaw) +
+          Math.abs(targetPitch - state.cam.pitch) >
+        1e-4;
 
       // Paddle pozisyonu: mouse cursor'ın canvas'taki pozisyonunu unproject ederek
       // paddle'ın 3D world konumuna çevir. Böylece cursor her zaman paddle'ın tam
@@ -988,24 +1077,6 @@ export default function PingPong() {
         });
         state.bulletCooldownT = BULLET_COOLDOWN_MS;
         SFX.bullet();
-      }
-
-      // Sadece time mode'da süre saymakta
-      if (state.running && state.mode === MODE_TIME) {
-        state.gameTime += dt;
-        const remaining = Math.max(0, GAME_DURATION - state.gameTime);
-        setTimeLeft(remaining);
-        if (remaining <= 0) {
-          state.running = false;
-          state.gameOver = true;
-          setRunning(false);
-          setGameOver(true);
-          SFX.gameOver();
-        }
-      } else if (state.running && state.mode === MODE_SURVIVAL) {
-        // Survival'da da gameTime artıyor (skor için kullanmıyoruz, ama
-        // shake/spawn timer animasyonları için tutarlılık)
-        state.gameTime += dt;
       }
 
       if (state.running && !isSpawning) {
@@ -1084,7 +1155,6 @@ export default function PingPong() {
             // Player kaçırdı
             if (state.mode === MODE_SURVIVAL) {
               state.lives = Math.max(0, state.lives - 1);
-              setLives(state.lives);
               state.missFlash = 1;
               SFX.loseLife();
               if (state.lives <= 0) {
@@ -1196,8 +1266,6 @@ export default function PingPong() {
         for (const rp of state.ripples) rp.t += dt;
         state.ripples = state.ripples.filter((rp) => rp.t < rp.life);
       }
-
-      render(playerX, playerY);
     }
 
     function render(playerX, playerY) {
@@ -1425,8 +1493,9 @@ export default function PingPong() {
       window.removeEventListener("pingpong-restart", onExternalRestart);
       canvas.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("touchmove", onTouchMove);
-      canvas.removeEventListener("click", onStart);
-      canvas.removeEventListener("touchstart", onStart);
+      canvas.removeEventListener("pointerdown", onStart);
+      // Sayfadan çıkınca ses bağlamını uyut; sonraki BAŞLA yeniden uyandırır
+      if (_audioCtx && _audioCtx.state === "running") _audioCtx.suspend();
     };
   }, []);
 
@@ -1472,9 +1541,14 @@ export default function PingPong() {
   //  - Game over panelinde "TEKRAR OYNA" → başlangıç ekranına döner.
   //  - Başlangıç panelinde "BAŞLA" → yeni tur başlatır.
   const onPrimary = () => {
+    // Ses bağlamı bu tıklamada açılsın, ilk vuruşta değil
+    wakeAudio();
     if (gameOver) {
       setGameOver(false);
-      if (stateRef.current) stateRef.current.gameOver = false;
+      if (stateRef.current) {
+        stateRef.current.gameOver = false;
+        stateRef.current.dirty = true;
+      }
       return;
     }
     if (typeof window !== "undefined") {
@@ -1496,7 +1570,7 @@ export default function PingPong() {
   const canNativeShare =
     typeof navigator !== "undefined" && typeof navigator.share === "function";
 
-  const durationLabel = `${Math.round(GAME_DURATION / 1000)} SANIYE`;
+  const durationLabel = `${Math.round(GAME_DURATION / 1000)} SANİYE`;
   const showOverlay = !running || gameOver;
 
   return (
@@ -1508,7 +1582,8 @@ export default function PingPong() {
         ref={canvasRef}
         className="block absolute inset-0 w-full h-full select-none touch-none"
         style={{ cursor: running ? "crosshair" : "pointer" }}
-        aria-label="3D Ping Pong"
+        role="img"
+        aria-label="3D Ping Pong oyun alanı"
       />
 
       <button
@@ -1556,10 +1631,16 @@ export default function PingPong() {
       {showOverlay && (
         <div
           key={gameOver ? "over" : "ready"}
-          className="absolute inset-0 z-30 flex items-center justify-center bg-black/85 backdrop-blur-md animate-fade-in p-5"
+          // Panel oyunun arayüzü, sayfanın metni değil: data-chrome ile
+          // markdown çıktısına girmiyor (lib/agentMarkdown.js). Skor blokları
+          // da bu panelde; oyun sırasındaki HUD zaten canvas'a çiziliyor.
+          data-chrome
+          className="absolute inset-0 z-30 flex items-center justify-center overflow-y-auto bg-black/85 backdrop-blur-md animate-fade-in p-5 [@media(max-height:480px)]:py-3"
         >
+          {/* Kısa ekranda (yatay telefon) panel sıkılaşıyor; yine sığmazsa
+              my-auto sayesinde üstten başlıyor ve overlay kaydırılabiliyor. */}
           <div
-            className="relative w-full max-w-[460px] rounded-md border border-white/10 px-7 py-9 overflow-hidden"
+            className="relative my-auto w-full max-w-[460px] rounded-md border border-white/10 px-7 py-9 overflow-hidden [@media(max-height:480px)]:py-5"
             style={{ background: "rgba(6, 8, 14, 0.92)" }}
           >
             {/* Köşe brackets — HUD frame dilini panele uzat */}
@@ -1591,7 +1672,7 @@ export default function PingPong() {
 
             {/* Alt başlık — moda ve duruma göre değişir */}
             <div
-              className="relative mt-1 text-center font-mono text-[10px] tracking-[0.32em] text-white/35"
+              className="relative mt-1 text-center font-mono text-[10px] tracking-[0.32em] text-white/55"
               style={{
                 animation: "pingpong-flicker-in 0.45s ease-out 80ms both",
               }}
@@ -1599,7 +1680,7 @@ export default function PingPong() {
               {gameOver
                 ? mode === MODE_SURVIVAL
                   ? "TÜM CANLAR BİTTİ"
-                  : `ROUND COMPLETE · ${durationLabel}`
+                  : `SÜRE DOLDU · ${durationLabel}`
                 : mode === MODE_SURVIVAL
                   ? `${SURVIVAL_LIVES} CAN · ATEŞ ET, DAYAN`
                   : `${durationLabel} · CPU'YU YEN`}
@@ -1610,12 +1691,16 @@ export default function PingPong() {
                 seçimi orada yapılıyor. */}
             {!gameOver && (
               <div
-                className="relative mt-6 flex justify-center"
+                className="relative mt-6 flex justify-center [@media(max-height:480px)]:mt-3"
                 style={{
                   animation: "pingpong-flicker-in 0.45s ease-out 140ms both",
                 }}
               >
-                <div className="inline-flex rounded-md border border-white/10 bg-white/[0.03] p-0.5">
+                <div
+                  role="group"
+                  aria-label="Oyun modu"
+                  className="inline-flex rounded-md border border-white/10 bg-white/[0.03] p-0.5"
+                >
                   {[
                     { k: MODE_TIME, label: "SÜRE" },
                     { k: MODE_SURVIVAL, label: "ARENA" },
@@ -1625,15 +1710,22 @@ export default function PingPong() {
                       <button
                         key={opt.k}
                         type="button"
+                        aria-pressed={active}
                         onClick={() => switchMode(opt.k)}
-                        className="px-3.5 py-1.5 rounded-[5px] font-mono text-[10px] tracking-[0.28em] uppercase transition cursor-pointer"
+                        // Yüksek kontrast modunda arka plan düşüyor; seçili
+                        // mod çerçeveyle ayrılsın
+                        className={`px-3.5 py-1.5 rounded-[5px] font-mono text-[10px] tracking-[0.28em] uppercase transition cursor-pointer ${
+                          active
+                            ? "forced-colors:outline-2 forced-colors:-outline-offset-2"
+                            : ""
+                        }`}
                         style={{
                           background: active
                             ? "rgba(255,255,255,0.12)"
                             : "transparent",
                           color: active
                             ? "rgba(255,255,255,0.95)"
-                            : "rgba(255,255,255,0.45)",
+                            : "rgba(255,255,255,0.55)",
                         }}
                       >
                         {opt.label}
@@ -1646,7 +1738,7 @@ export default function PingPong() {
 
             {/* Skor blokları */}
             <div
-              className="relative mt-7 flex items-end justify-center gap-5"
+              className="relative mt-7 flex items-end justify-center gap-5 [@media(max-height:480px)]:mt-3"
               style={{
                 animation: "pingpong-flicker-in 0.5s ease-out 200ms both",
               }}
@@ -1681,7 +1773,7 @@ export default function PingPong() {
             {/* Verdict badge — sadece game over'da */}
             {gameOver && (
               <div
-                className="relative mt-7 text-center"
+                className="relative mt-7 text-center [@media(max-height:480px)]:mt-3"
                 style={{
                   animation: "pingpong-flicker-in 0.45s ease-out 380ms both",
                 }}
@@ -1706,7 +1798,7 @@ export default function PingPong() {
 
             {/* Aksiyon butonları */}
             <div
-              className="relative mt-8 space-y-2"
+              className="relative mt-8 space-y-2 [@media(max-height:480px)]:mt-4"
               style={{
                 animation: "pingpong-flicker-in 0.45s ease-out 480ms both",
               }}
@@ -1714,7 +1806,7 @@ export default function PingPong() {
               <button
                 type="button"
                 onClick={onPrimary}
-                className="group flex w-full items-center justify-center gap-2 rounded-md bg-white px-5 py-3.5 font-mono text-[12px] tracking-[0.3em] uppercase text-black transition cursor-pointer hover:bg-white/95"
+                className="group flex w-full items-center justify-center gap-2 rounded-md bg-white px-5 py-3.5 font-mono text-[12px] tracking-[0.3em] uppercase text-black transition cursor-pointer hover:bg-white/95 [@media(max-height:480px)]:py-2.5"
               >
                 <span>{gameOver ? "TEKRAR OYNA" : "BAŞLA"}</span>
                 <span
@@ -1725,12 +1817,14 @@ export default function PingPong() {
                 </span>
               </button>
 
+              {/* Paylaşım düğmeleri kısa ekranda tek satıra geçiyor; satıra
+                  sığmazlarsa eski düzene sarıyorlar. */}
               {gameOver && (
-                <>
+                <div className="flex flex-col gap-2 [@media(max-height:480px)]:flex-row [@media(max-height:480px)]:flex-wrap">
                   <button
                     type="button"
                     onClick={onShareX}
-                    className="flex w-full items-center justify-center gap-2.5 rounded-md border border-white/15 bg-white/[0.06] px-5 py-3 font-mono text-[11px] tracking-[0.28em] uppercase text-white/85 transition cursor-pointer hover:border-white/30 hover:bg-white/[0.12] hover:text-white"
+                    className="flex w-full items-center justify-center gap-2.5 rounded-md border border-white/15 bg-white/[0.06] px-5 py-3 font-mono text-[11px] tracking-[0.28em] uppercase text-white/85 transition cursor-pointer hover:border-white/30 hover:bg-white/[0.12] hover:text-white [@media(max-height:480px)]:w-auto [@media(max-height:480px)]:flex-auto [@media(max-height:480px)]:gap-1.5 [@media(max-height:480px)]:px-3 [@media(max-height:480px)]:py-2.5 [@media(max-height:480px)]:text-[10px] [@media(max-height:480px)]:tracking-[0.24em]"
                   >
                     <svg
                       width="13"
@@ -1745,13 +1839,13 @@ export default function PingPong() {
                   </button>
 
                   <div
-                    className={canNativeShare ? "grid grid-cols-2 gap-2" : ""}
+                    className={`${canNativeShare ? "grid grid-cols-2 gap-2" : ""} [@media(max-height:480px)]:contents`}
                   >
                     {canNativeShare && (
                       <button
                         type="button"
                         onClick={onNativeShare}
-                        className="flex items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2.5 font-mono text-[10px] tracking-[0.24em] uppercase text-white/70 transition cursor-pointer hover:border-white/25 hover:bg-white/[0.1] hover:text-white"
+                        className="flex items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2.5 font-mono text-[10px] tracking-[0.24em] uppercase text-white/70 transition cursor-pointer hover:border-white/25 hover:bg-white/[0.1] hover:text-white [@media(max-height:480px)]:flex-auto"
                       >
                         <svg
                           width="11"
@@ -1776,7 +1870,7 @@ export default function PingPong() {
                     <button
                       type="button"
                       onClick={onCopyLink}
-                      className="flex items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2.5 font-mono text-[10px] tracking-[0.24em] uppercase text-white/70 transition cursor-pointer hover:border-white/25 hover:bg-white/[0.1] hover:text-white"
+                      className="flex items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/[0.04] px-3 py-2.5 font-mono text-[10px] tracking-[0.24em] uppercase text-white/70 transition cursor-pointer hover:border-white/25 hover:bg-white/[0.1] hover:text-white [@media(max-height:480px)]:flex-auto"
                     >
                       <svg
                         width="11"
@@ -1795,7 +1889,7 @@ export default function PingPong() {
                       {copied ? "✓ KOPYALANDI" : "LİNK"}
                     </button>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>

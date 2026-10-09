@@ -13,8 +13,7 @@ export default function AvatarLink() {
   const preloadedRef = useRef(false);
   const [origin, setOrigin] = useState(null);
 
-  const handleClick = (e) => {
-    e.preventDefault();
+  const handleClick = () => {
     if (!linkRef.current) return;
     const rect = linkRef.current.getBoundingClientRect();
     setOrigin({
@@ -37,16 +36,18 @@ export default function AvatarLink() {
 
   return (
     <>
-      <a
+      {/* Bir yere gitmiyor, pencere açıyor: bağlantı değil düğme. href="#"
+          iken Space açmak yerine sayfayı kaydırıyordu. */}
+      <button
         ref={linkRef}
-        href="#"
+        type="button"
         onClick={handleClick}
         onMouseEnter={preload}
         onFocus={preload}
         onTouchStart={preload}
         aria-label="Yunus Eş avatarını büyüt"
         aria-expanded={origin !== null}
-        className="rounded-full shrink-0 inline-block animate-fade-in-up"
+        className="rounded-full shrink-0 inline-block animate-fade-in-up cursor-pointer"
       >
         <Image
           src="/avatar.webp"
@@ -57,7 +58,7 @@ export default function AvatarLink() {
           className="rounded-full object-cover block"
           style={{ width: "auto", height: "auto" }}
         />
-      </a>
+      </button>
       {origin && (
         <AvatarLightbox origin={origin} onClose={handleClose} />
       )}
