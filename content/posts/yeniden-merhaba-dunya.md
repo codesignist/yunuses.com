@@ -3,6 +3,7 @@ title: Yirmi Yıl Sonra Yeniden Merhaba Dünya
 date: 2026-04-29
 summary: Bu blogun ilk yazısı. Burada yazılım, teknoloji ve kişisel konular üzerine düşündüklerimi paylaşacağım.
 tags: [genel, başlangıç]
+cover: /blog/yeniden-merhaba-dunya/cover.jpg
 ---
 
 İlk blog sitemi yirmi yıl önce Flash ile geliştirmiştim. O zamanlar 3D engine, matematik formülleri ve yazılım üzerine yazılar paylaşıyordum.
