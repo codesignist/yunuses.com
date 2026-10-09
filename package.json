@@ -1,13 +1,14 @@
 {
   "name": "yunuses.com",
   "version": "1.0.0",
-  "description": "Yunus Eş — kişisel web sitesi",
-  "main": "index.js",
+  "description": "Yunus Eş'in kişisel web sitesi",
+  "private": true,
   "scripts": {
     "dev": "next",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "favicons": "node scripts/generate-favicons.mjs"
   },
   "repository": {
     "type": "git",
@@ -19,20 +20,24 @@
     "nextjs"
   ],
   "author": "codesignist",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/codesignist/yunuses.com/issues"
   },
   "homepage": "https://yunuses.com",
+  "engines": {
+    "node": ">=20.9"
+  },
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "gray-matter": "^4.0.3",
     "hast-util-to-jsx-runtime": "^2.3.6",
-    "next": "^16.3.6",
+    "next": "^16.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "rehype-external-links": "^3.0.0",
     "rehype-parse": "^9.0.1",
+    "rehype-raw": "^7.0.0",
     "rehype-remark": "^10.0.1",
     "rehype-stringify": "^10.0.1",
     "remark": "^15.0.1",
@@ -45,6 +50,6 @@
   },
   "devDependencies": {
     "eslint": "^10.11.0",
-    "eslint-config-next": "^16.3.6"
+    "eslint-config-next": "^16.4.0"
   }
 }

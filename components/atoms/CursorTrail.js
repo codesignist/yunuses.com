@@ -112,6 +112,13 @@ export default function CursorTrail() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
+    // Döngü iz durulunca kendini durduruyor; her olay onu gerekirse yeniden
+    // başlatıyor.
+    let raf = 0;
+    const wake = () => {
+      if (!raf) raf = requestAnimationFrame(loop);
+    };
+
     let dpr = window.devicePixelRatio || 1;
     const resize = () => {
       dpr = window.devicePixelRatio || 1;
@@ -122,7 +129,12 @@ export default function CursorTrail() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
-    window.addEventListener("resize", resize);
+    // Boyut değişince canvas siliniyor; döngü durmuşsa son kare yeniden çizilsin.
+    const onResize = () => {
+      resize();
+      wake();
+    };
+    window.addEventListener("resize", onResize);
 
     const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
     const tracker = { x: mouse.x, y: mouse.y };
@@ -157,7 +169,10 @@ export default function CursorTrail() {
       strokeRGB = `${parseInt(v.slice(0, 2), 16)}, ${parseInt(v.slice(2, 4), 16)}, ${parseInt(v.slice(4, 6), 16)}`;
     };
     readStrokeColor();
-    const onThemeChange = () => readStrokeColor();
+    const onThemeChange = () => {
+      readStrokeColor();
+      wake();
+    };
     window.addEventListener("themechange", onThemeChange);
 
     const isInFixedTree = (el) => {
@@ -184,28 +199,35 @@ export default function CursorTrail() {
       return { link, fixed };
     };
 
+    // İmlecin altındaki linki yeniden belirler. Sadece mousemove'da değil,
+    // kaydırmada ve link sayfadan kalkınca da çağrılıyor; fare durduğu halde
+    // altındaki şey değişebiliyor.
+    const updateContext = (x, y) => {
+      const ctx = detectContext(x, y);
+      mouseOverFixed = ctx.fixed;
+      const newLink = ctx.link;
+      if (newLink === hoveredLink) return;
+      if (newLink) {
+        // Yeni linke girince yörüngeyi imlecin geldiği açıdan başlat —
+        // tracker'ın o anki konumundan en yakın orbit noktasına geçişi yumuşatır
+        const rect = newLink.getBoundingClientRect();
+        orbitAngle = Math.atan2(
+          y - (rect.top + rect.height / 2),
+          x - (rect.left + rect.width / 2),
+        );
+        orbitPos = nearestRectPathPos(rect, x, y);
+      }
+      rectLocked = false;
+      approachFrames = 0;
+      hoveredLink = newLink;
+    };
+
     const onMove = (e) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
       active = true;
-      const ctx = detectContext(e.clientX, e.clientY);
-      mouseOverFixed = ctx.fixed;
-      const newLink = ctx.link;
-      if (newLink !== hoveredLink) {
-        if (newLink) {
-          // Yeni linke girince yörüngeyi imlecin geldiği açıdan başlat —
-          // tracker'ın o anki konumundan en yakın orbit noktasına geçişi yumuşatır
-          const rect = newLink.getBoundingClientRect();
-          orbitAngle = Math.atan2(
-            e.clientY - (rect.top + rect.height / 2),
-            e.clientX - (rect.left + rect.width / 2),
-          );
-          orbitPos = nearestRectPathPos(rect, e.clientX, e.clientY);
-        }
-        rectLocked = false;
-        approachFrames = 0;
-        hoveredLink = newLink;
-      }
+      updateContext(e.clientX, e.clientY);
+      wake();
     };
     const onEnter = (e) => {
       mouse.x = e.clientX;
@@ -225,16 +247,22 @@ export default function CursorTrail() {
       rectLocked = false;
       approachFrames = 0;
       hoveredLink = ctx.link;
+      wake();
     };
     const onLeave = () => {
       active = false;
       hoveredLink = null;
       mouseOverFixed = false;
+      wake();
     };
 
+    // mouseenter/mouseleave kabarmıyor, window'a hiç ulaşmıyordu; fare
+    // pencereden çıkınca iz linkin etrafında dönmeye devam ediyordu. Kök
+    // eleman olaylarını kendisi alıyor.
+    const root = document.documentElement;
     window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseenter", onEnter);
-    window.addEventListener("mouseleave", onLeave);
+    root.addEventListener("mouseenter", onEnter);
+    root.addEventListener("mouseleave", onLeave);
 
     // Trail noktaları viewport koordinatında saklandığından, canvas fixed iken
     // scroll'da geride kalan izler "camda" duruyormuş gibi hissettiriyor.
@@ -258,11 +286,41 @@ export default function CursorTrail() {
         p.x -= dx;
         p.y -= dy;
       }
+      if (!active) return;
+      // Tekerlekle kaydırınca mousemove gelmiyor; imlecin altına yeni kart
+      // girdiyse iz eskisini değil onu izlesin.
+      updateContext(mouse.x, mouse.y);
+      wake();
     };
     window.addEventListener("scroll", onScroll, { passive: true });
 
-    let raf = 0;
-    const loop = () => {
+    // İz imlece oturdu mu: hız sıfıra yakın ve bütün noktalar imlecin
+    // dibinde. O zaman son kare ekranda kalıyor, döngü duruyor.
+    const isSettled = () => {
+      if (Math.abs(velocity.x) > 0.05 || Math.abs(velocity.y) > 0.05) {
+        return false;
+      }
+      for (const p of trail) {
+        if (Math.abs(p.x - mouse.x) > 0.5 || Math.abs(p.y - mouse.y) > 0.5) {
+          return false;
+        }
+      }
+      return true;
+    };
+
+    function loop() {
+      raf = 0;
+      // Fare pencere dışında: canvas'ı bir kez temizle, döngü dursun.
+      if (!active) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+      // Tıklanan link sayfa değişince DOM'dan çıkıyor; kopmuş elemanın kutusu
+      // {0,0,0,0} döndüğü için iz sol üst köşeye gidiyordu.
+      if (hoveredLink && !hoveredLink.isConnected) {
+        updateContext(mouse.x, mouse.y);
+      }
+
       // Hedef: link üzerindeyken yörünge noktası, değilse imlecin kendisi
       let targetX = mouse.x;
       let targetY = mouse.y;
@@ -333,47 +391,46 @@ export default function CursorTrail() {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      if (active) {
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        for (let i = 0; i < trail.length - 1; i++) {
-          const t = i / (trail.length - 1);
-          ctx.strokeStyle = `rgba(${strokeRGB}, ${t * MAX_ALPHA})`;
-          ctx.lineWidth = MIN_WIDTH + t * (MAX_WIDTH - MIN_WIDTH);
-          ctx.beginPath();
-          if (i === 0) {
-            ctx.moveTo(trail[0].x, trail[0].y);
-          } else {
-            ctx.moveTo(
-              (trail[i - 1].x + trail[i].x) / 2,
-              (trail[i - 1].y + trail[i].y) / 2,
-            );
-          }
-          if (i === trail.length - 2) {
-            ctx.lineTo(trail[trail.length - 1].x, trail[trail.length - 1].y);
-          } else {
-            ctx.quadraticCurveTo(
-              trail[i].x,
-              trail[i].y,
-              (trail[i].x + trail[i + 1].x) / 2,
-              (trail[i].y + trail[i + 1].y) / 2,
-            );
-          }
-          ctx.stroke();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      for (let i = 0; i < trail.length - 1; i++) {
+        const t = i / (trail.length - 1);
+        ctx.strokeStyle = `rgba(${strokeRGB}, ${t * MAX_ALPHA})`;
+        ctx.lineWidth = MIN_WIDTH + t * (MAX_WIDTH - MIN_WIDTH);
+        ctx.beginPath();
+        if (i === 0) {
+          ctx.moveTo(trail[0].x, trail[0].y);
+        } else {
+          ctx.moveTo(
+            (trail[i - 1].x + trail[i].x) / 2,
+            (trail[i - 1].y + trail[i].y) / 2,
+          );
         }
+        if (i === trail.length - 2) {
+          ctx.lineTo(trail[trail.length - 1].x, trail[trail.length - 1].y);
+        } else {
+          ctx.quadraticCurveTo(
+            trail[i].x,
+            trail[i].y,
+            (trail[i].x + trail[i + 1].x) / 2,
+            (trail[i].y + trail[i + 1].y) / 2,
+          );
+        }
+        ctx.stroke();
       }
 
-      raf = requestAnimationFrame(loop);
-    };
-    loop();
+      // Link üzerindeyken yörünge hep dönüyor; boşta iz imlece oturunca
+      // fare kıpırdayana kadar her kare çizmeye gerek yok.
+      if (hoveredLink || !isSettled()) raf = requestAnimationFrame(loop);
+    }
 
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseenter", onEnter);
-      window.removeEventListener("mouseleave", onLeave);
+      root.removeEventListener("mouseenter", onEnter);
+      root.removeEventListener("mouseleave", onLeave);
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", resize);
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("themechange", onThemeChange);
     };
   }, []);

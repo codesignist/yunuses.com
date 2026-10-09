@@ -466,6 +466,11 @@ export function createHead(scene, spine, styleRef) {
     eyeTex.dispose();
     haloMat.dispose();
     haloTex.dispose();
+    // Sprite'lar three'nin modul seviyesindeki tek bir geometriyi paylasiyor.
+    // Dispose edilmezse renderer'in bu geometriye taktigi dinleyici, renderer'i
+    // ve butun GPU kaynaklarini sayfa yenilenene kadar canli tutuyordu. Sonraki
+    // renderer geometriyi bastan yukluyor.
+    halos[0].geometry.dispose();
     if (objWrap) {
       objWrap.traverse((c) => {
         if (c.geometry) c.geometry.dispose();

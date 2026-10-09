@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 function getFsElement() {
   if (typeof document === "undefined") return null;
@@ -27,7 +27,26 @@ async function exitFs() {
   if (document.msExitFullscreen) return document.msExitFullscreen();
 }
 
+// iPhone Safari sayfa elemanını tam ekran yapamıyor (sadece video); orada
+// düğme basınca hiçbir şey yapmıyordu. Değer hiç değişmediği için abonelik boş.
+const subscribeNoop = () => () => {};
+const getFsSupported = () =>
+  !!(
+    document.fullscreenEnabled ||
+    document.webkitFullscreenEnabled ||
+    document.mozFullScreenEnabled ||
+    document.msFullscreenEnabled
+  );
+// Sunucuda ve ilk hydration'da görünür: masaüstünde sağ üstteki düğmeler
+// kaymasın, desteklemeyen cihazda hydration'dan hemen sonra kaybolsun.
+const getFsSupportedOnServer = () => true;
+
 export default function FullscreenToggle() {
+  const supported = useSyncExternalStore(
+    subscribeNoop,
+    getFsSupported,
+    getFsSupportedOnServer,
+  );
   const [isFs, setIsFs] = useState(false);
 
   useEffect(() => {
@@ -46,6 +65,8 @@ export default function FullscreenToggle() {
       else await requestFs(document.documentElement);
     } catch {}
   };
+
+  if (!supported) return null;
 
   return (
     <button

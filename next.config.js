@@ -54,6 +54,10 @@ const agentDiscoveryLinks = [
   '</sitemap.xml>; rel="describedby"; type="application/xml"; title="Sitemap"',
 ];
 
+// Markdown da aynı adresten döndüğü için buraya "Vary: Accept" eklemek akla
+// geliyor ama işe yaramıyor: Next sayfa yanıtında Vary'yi kendi değeriyle
+// baştan yazıyor. HTML ileride kenarda önbelleklenirse ayrımı bir
+// Cloudflare kuralı yapmalı.
 const agentDiscoveryHeaders = [
   {
     key: "Link",
@@ -61,10 +65,21 @@ const agentDiscoveryHeaders = [
   },
 ];
 
+// Dragon'un model ve dokuları sabit adlarla duruyor; Next public dosyaları
+// max-age=0 ile verdiği için her ziyarette yeniden soruluyordu. Adlar
+// sürümlenmediği için bir günle sınırlı.
+const dragonAssetHeaders = [
+  {
+    key: "Cache-Control",
+    value: "public, max-age=86400",
+  },
+];
+
 module.exports = {
   reactStrictMode: true,
   trailingSlash: true,
   devIndicators: false,
+  poweredByHeader: false,
   async headers() {
     return [
       {
@@ -81,10 +96,30 @@ module.exports = {
         source: "/:path+/",
         headers: agentDiscoveryHeaders,
       },
+      // Sadece uzantılı dosyalar: /lab/dragon/ sayfasının kendisi dışarıda.
+      {
+        source: "/lab/dragon/:file(.+\\.\\w+)",
+        headers: dragonAssetHeaders,
+      },
+      // .obj için tanımlı bir tür yok, application/x-tgif ile gidince ne
+      // Next ne Cloudflare sıkıştırıyordu. Düz metin olarak gzip'e giriyor.
+      {
+        source: "/lab/dragon/limb.obj",
+        headers: [{ key: "Content-Type", value: "text/plain; charset=utf-8" }],
+      },
     ];
   },
   async redirects() {
     return [
+      // www ile gelen apex'e gitsin; yoksa paylaşılan linkler, tema tercihi ve
+      // istatistikler iki adrese bölünüyor. Sondaki "/" sayfaları tek
+      // atlamada götürüyor.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.yunuses.com" }],
+        destination: "https://yunuses.com/:path*/",
+        permanent: true,
+      },
       { source: "/rss", destination: "/feed.xml", permanent: true },
       { source: "/feed", destination: "/feed.xml", permanent: true },
       { source: "/atom.xml", destination: "/feed.xml", permanent: true },

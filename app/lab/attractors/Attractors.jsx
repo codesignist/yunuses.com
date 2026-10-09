@@ -145,6 +145,7 @@ export default function Attractors() {
   const overlayRef = useRef(null);
   const [active, setActive] = useState("lorenz");
   const [ready, setReady] = useState(false);
+  const [unsupported, setUnsupported] = useState(false);
 
   const trajRef = useRef(null);
   const attractorRef = useRef(ATTRACTORS.lorenz);
@@ -189,7 +190,15 @@ export default function Attractors() {
       pinchZoomStart: 1,
     };
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // WebGL2 acilamayan tarayicida three hata firlatiyor, sayfa Next'in
+    // genel hata ekranina dusuyordu. Henuz dinleyici kurulmadi, donmek yeter.
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+    } catch {
+      setUnsupported(true);
+      return;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 1);
     renderer.domElement.style.width = "100%";
@@ -368,6 +377,10 @@ export default function Attractors() {
     // Donus ve momentum 60 Hz kare birimiyle yazili; frames ile olcekleniyor.
     // Onceden kare basina uygulaniyordu, 144 Hz ekranda 2.4 kat hizli
     // donuyor ve momentum daha cabuk sonuyordu.
+    //
+    // Hareketi azalt tercihinde kendiliginden donme yok; surukleme ve
+    // birakinca suren momentum kullanicinin kendi hareketi, aynen kaliyor.
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let raf = 0;
     let prevT = 0;
     function loop(now) {
@@ -376,7 +389,7 @@ export default function Attractors() {
       const frames = dt * 60;
       const idle = !state.dragging && now - state.lastInteractT > 2500;
       if (idle) {
-        state.yaw += 0.0015 * frames;
+        if (!reduceMotion.matches) state.yaw += 0.0015 * frames;
       } else if (!state.dragging) {
         state.yaw += state.vy * frames;
         state.pitch += state.vp * frames;
@@ -453,10 +466,21 @@ export default function Attractors() {
       state.lastInteractT = performance.now();
     }
 
+    // Olay basina sabit %8 adim trackpad'de kontrolsuzdu: tek kucuk kaydirma
+    // onlarca olay uretip yakinligi sinirdan sinira savuruyordu. Adim artik
+    // kaydirma miktariyla orantili; satir ve sayfa birimli olaylar piksele
+    // cevriliyor. Fare centigi (100) ~%10. Trackpad'de iki parmakla
+    // yakinlastirma ctrl+wheel olarak geliyor ve degerleri kucuk; on kat
+    // carpanla parmak hareketiyle bire bir gidiyor. Ctrl basili fare tekerligi
+    // de ctrl+wheel geliyor ama centik basina 100; siniri dar tutmasak tek
+    // centik ~2.7 kat yakinlastiriyordu, simdi en fazla ~%22.
     function onWheel(e) {
       e.preventDefault();
-      const k = e.deltaY > 0 ? 0.92 : 1.08;
-      state.zoom = Math.max(0.4, Math.min(5, state.zoom * k));
+      const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1;
+      const lim = e.ctrlKey ? 20 : 150;
+      const d = Math.max(-lim, Math.min(lim, e.deltaY * unit));
+      const k = e.ctrlKey ? 0.01 : 0.001;
+      state.zoom = Math.max(0.4, Math.min(5, state.zoom * Math.exp(-d * k)));
       state.lastInteractT = performance.now();
     }
 
@@ -477,6 +501,8 @@ export default function Attractors() {
       line.geometry.dispose();
       material.dispose();
       renderer.dispose();
+      // Baglami hemen birak, GPU bellegi cop toplayiciyi beklemesin.
+      renderer.forceContextLoss();
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);
       }
@@ -485,8 +511,11 @@ export default function Attractors() {
 
   return (
     <div className="absolute inset-0">
+      {/* Tuvali three kendisi ekliyor; ad kapsayicida. */}
       <div
         ref={containerRef}
+        role="img"
+        aria-label={`${ATTRACTORS[active].label} çekicisinin çizimi`}
         className="absolute inset-0 touch-none select-none"
         style={{ cursor: "grab" }}
       />
@@ -496,18 +525,26 @@ export default function Attractors() {
         className="absolute inset-0 w-full h-full pointer-events-none"
       />
 
-      {!ready && (
-        <div className="fixed inset-0 flex items-center justify-center text-[12px] text-white/55 pointer-events-none">
+      {/* data-chrome: sunucuda da ciziliyor, sayfanin markdown'ina girmesin. */}
+      {!ready && !unsupported && (
+        <div data-chrome className="fixed inset-0 flex items-center justify-center text-[12px] text-white/55 pointer-events-none">
           Yörünge hesaplanıyor...
         </div>
       )}
 
-      <div className="fixed bottom-4 left-4 z-30 flex flex-col gap-2 items-start">
-        <div data-chrome className="text-[12px] text-white/60 px-1 pointer-events-none">
-          Sürükleyerek döndür, tekerlekle yakınlaş.
+      {unsupported ? (
+        <div className="absolute inset-0 flex items-center justify-center text-white/70 text-sm px-6 text-center">
+          Tarayıcın bu deneyi çalıştıramıyor. Başka bir tarayıcıda ya da cihazda dene.
         </div>
-        <LabOptionBar options={ATTRACTOR_OPTIONS} active={active} onSelect={setActive} />
-      </div>
+      ) : (
+        <div className="fixed bottom-4 left-4 z-30 flex flex-col gap-2 items-start">
+          <div data-chrome className="text-[12px] text-white/60 px-1 pointer-events-none">
+            <span className="pointer-coarse:hidden">Sürükleyerek döndür, tekerlekle yakınlaş.</span>
+            <span className="hidden pointer-coarse:inline">Sürükleyerek döndür, iki parmakla yakınlaş.</span>
+          </div>
+          <LabOptionBar options={ATTRACTOR_OPTIONS} active={active} onSelect={setActive} />
+        </div>
+      )}
     </div>
   );
 }

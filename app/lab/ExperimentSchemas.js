@@ -16,6 +16,11 @@ export default function ExperimentSchemas({ slug }) {
   ];
   return (
     <>
+      {/* Deney sayfasi tek bir tuval, okunacak metni yok. Baslik ve aciklama
+          ekranda gorunmeden burada duruyor; arama motoru, ekran okuyucu ve
+          sayfanin markdown karsiligi sayfanin ne oldugunu buradan ogreniyor. */}
+      <h1 className="sr-only">{experiment.title}</h1>
+      <p className="sr-only">{experiment.description}</p>
       {schemas.map((s, i) => (
         <script
           key={i}

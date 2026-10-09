@@ -4,6 +4,7 @@ import ThemeInit from "components/atoms/ThemeInit";
 import ChromeControls from "components/organisms/ChromeControls";
 import CursorTrailLoader from "components/atoms/CursorTrailLoader";
 import SiteFooter from "components/organisms/SiteFooter";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_OG_IMAGE } from "lib/metadata";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 
 const geistSans = Geist({
@@ -12,10 +13,15 @@ const geistSans = Geist({
   display: "swap",
 });
 
+// preload kapali: mono yalnizca kucuk etiketlerde (deney tarihleri, lab
+// listesi, zero-to-hero) var, blog listesinde ve cogu yazida hic yok. Acikken
+// iki dosya her sayfada CSS ile ayni anda iniyor, blogun asil ihtiyaci olan
+// serif dosyalari arkada sirada bekliyordu.
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin", "latin-ext"],
   display: "swap",
+  preload: false,
 });
 
 // Serif once sadece /blog altinda yukleniyordu; bu yuzden anasayfadaki
@@ -37,15 +43,14 @@ const sourceSerif = Source_Serif_4({
   preload: false,
 });
 
-const title = "Yunus Eş";
-const description =
-  "Yazılımcı, CodeCube kurucusu. Dijital ürünler tasarlıyor ve hayata geçiriyor.";
+const title = SITE_NAME;
+const description = SITE_DESCRIPTION;
 
-// Alt sayfalar `title: "Foo"` yazınca otomatik "Foo — Yunus Eş" olur.
+// Alt sayfalar `title: "Foo"` yazınca otomatik "Foo · Yunus Eş" olur.
 // Default ise root sayfası için doğrudan "Yunus Eş".
 const titleConfig = {
   default: title,
-  template: `%s — ${title}`,
+  template: `%s · ${title}`,
 };
 
 export const metadata = {
@@ -56,9 +61,11 @@ export const metadata = {
   openGraph: {
     type: "website",
     siteName: title,
+    locale: "tr_TR",
     title: titleConfig,
     description,
     url: "/",
+    images: [SITE_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
@@ -66,16 +73,13 @@ export const metadata = {
     title: titleConfig,
     description,
   },
-  other: {
-    "fediverse:creator": "@codesignist@sosyal.teknofest.app",
-  },
 };
 
+// Yakinlastirma acik kaliyor: blog metnini iki parmakla buyutebilmek gerekiyor.
+// Deney tuvalleri touch-none ile kendi dokunma hareketlerini zaten koruyor.
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 export default function RootLayout({ children }) {

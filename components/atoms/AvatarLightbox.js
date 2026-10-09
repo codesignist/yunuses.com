@@ -10,10 +10,10 @@ const EXIT_DURATION = 300;
 export default function AvatarLightbox({ origin, onClose }) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
-  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
 
   useEffect(() => {
-    dialogRef.current?.focus({ preventScroll: true });
+    closeRef.current?.focus({ preventScroll: true });
 
     // İlk paint origin pozisyonunda olsun, ikinci RAF'ta açılış state'ine geç
     const id = requestAnimationFrame(() => {
@@ -24,8 +24,9 @@ export default function AvatarLightbox({ origin, onClose }) {
       if (e.key === "Escape") {
         triggerClose();
       } else if (e.key === "Tab") {
-        // Focus trap — modal içinde focusable element olmadığı için Tab'ı tutuyoruz
+        // Focus trap: modal içinde odaklanabilir tek şey kapat düğmesi
         e.preventDefault();
+        closeRef.current?.focus({ preventScroll: true });
       }
     };
     document.addEventListener("keydown", handleKey);
@@ -73,7 +74,6 @@ export default function AvatarLightbox({ origin, onClose }) {
 
   return (
     <div
-      ref={dialogRef}
       onClick={triggerClose}
       role="dialog"
       aria-modal="true"
@@ -95,6 +95,28 @@ export default function AvatarLightbox({ origin, onClose }) {
         outline: "none",
       }}
     >
+      {/* Resme dokunmak yutuluyor; dokunmatik ekran okuyucuda da bulunabilen
+          açık bir kapatma yolu. Zemin her temada koyu, odak çerçevesi beyaz. */}
+      <button
+        ref={closeRef}
+        type="button"
+        onClick={triggerClose}
+        aria-label="Kapat"
+        className="absolute top-5 right-5 w-9 h-9 rounded-full cursor-pointer flex items-center justify-center text-white/75 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-white"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <path d="M2.5 2.5L11.5 11.5M11.5 2.5L2.5 11.5" />
+        </svg>
+      </button>
       <div
         onClick={(e) => e.stopPropagation()}
         style={{

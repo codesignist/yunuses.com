@@ -37,7 +37,10 @@ export default function SiteFooter() {
     <footer className="border-t border-line px-6 max-md:px-5 py-8">
       <div className={`mx-auto ${maxWidthFor(pathname)}`}>
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-meta">
+          <nav
+            aria-label="Site"
+            className="flex flex-wrap items-center gap-x-6 gap-y-3 text-meta"
+          >
             <Link href="/" className="link-quiet">
               Anasayfa
             </Link>
@@ -50,7 +53,7 @@ export default function SiteFooter() {
             <a href="/feed.xml" target="_blank" rel="noopener" className="link-quiet">
               RSS
             </a>
-          </div>
+          </nav>
           {isBlogPost && <SharePost />}
         </div>
 
@@ -58,7 +61,11 @@ export default function SiteFooter() {
           <SocialArea data={SOCIAL_DATA} />
         </div>
 
-        <div className="mt-6 text-label text-faint">
+        {/* Sayfalar build'de statik üretiliyor; yeni yılda istemcinin yılı
+            HTML'dekinden farklı çıkınca hydration hatası kökü yeniden çiziyor,
+            <html>'deki data-theme siliniyordu. Yıl sonraki deploy'a kadar
+            build yılı kalıyor. */}
+        <div className="mt-6 text-label text-faint" suppressHydrationWarning>
           © {new Date().getFullYear()} Yunus Eş
         </div>
       </div>

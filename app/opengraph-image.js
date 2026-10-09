@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import fs from "node:fs";
 import path from "node:path";
 
-export const alt = "Yunus Eş — codesignist";
+export const alt = "Yunus Eş, codesignist";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -27,8 +27,11 @@ export default async function Image() {
           fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif",
         }}
       >
+        {/* next/og yalnız düz <img> anlıyor. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={avatarSrc}
+          alt=""
           width={220}
           height={220}
           style={{ borderRadius: "50%", objectFit: "cover" }}

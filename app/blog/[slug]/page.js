@@ -4,31 +4,50 @@ import { notFound } from "next/navigation";
 import { formatDate, getAllPosts, getPostBySlug } from "lib/posts";
 import { PERSON, SITE_URL } from "lib/identity";
 import { jsonLd, breadcrumbList } from "lib/jsonLd";
+import { FEED_TYPES, pageMetadata } from "lib/metadata";
+
+// Yalniz build'de uretilen yazilar. Bilinmeyen slug render edilmeden kok
+// 404'e dusuyor; yoksa her yeni adres sunucu diskine bir sayfa daha yaziyordu.
+export const dynamicParams = false;
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
 }
 
+// Dosya tabanli OG gorselini Next sonda egik cizgi olmadan yaziyor; trailingSlash
+// acik oldugu icin her paylasim onizlemesi once 308 aliyordu. Adresi elle
+// veriyoruz, twitter:image da buradan doluyor. Gorsel degisip eski onizleme
+// takilirsa adresin sonuna ?v=2 gibi bir ek konabilir.
+const ogImagePath = (slug) => `/blog/${slug}/opengraph-image/`;
+
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) return {};
-  return {
+  // Diger sayfalarla ayni temel (og:url, site adi, dil, twitter:site);
+  // yaziya ozel olan tur, yayin tarihi ve feed baglantilari.
+  const base = pageMetadata({
     title: post.title,
     description: post.summary,
+    path: `/blog/${slug}/`,
+    image: {
+      url: ogImagePath(slug),
+      width: 1200,
+      height: 630,
+      type: "image/png",
+      alt: post.title,
+    },
+  });
+  return {
+    ...base,
     openGraph: {
+      ...base.openGraph,
       type: "article",
-      title: post.title,
-      description: post.summary,
       publishedTime: post.date,
     },
-    twitter: {
-      card: "summary_large_image",
-      title: post.title,
-      description: post.summary,
-    },
     alternates: {
-      canonical: `/blog/${slug}/`,
+      ...base.alternates,
+      types: FEED_TYPES,
     },
   };
 }
@@ -58,7 +77,7 @@ export default async function PostPage({ params }) {
     publisher: PERSON,
     image: {
       "@type": "ImageObject",
-      url: `${SITE_URL}/blog/${post.slug}/opengraph-image`,
+      url: `${SITE_URL}${ogImagePath(post.slug)}`,
       width: 1200,
       height: 630,
     },

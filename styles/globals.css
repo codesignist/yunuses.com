@@ -28,13 +28,15 @@
   --text-body: 0.9375rem;
   --text-body--line-height: 1.7;
 
-  /* Lesson type colors — kanonik renkler, anlamı korunuyor */
+  /* Lesson type colors — kanonik renkler, anlamı korunuyor. Gri ve mor
+     (#757575, #9747ff) beyaz yaziyla 4.5:1'i tutmuyordu; ayni tonlarin
+     koyusu. */
   --color-type-basic: #ffa629;
   --color-type-javascript: #ffcd29;
   --color-type-common: #14ae5c;
   --color-type-react: #0d99ff;
-  --color-type-next: #757575;
-  --color-type-lesson: #9747ff;
+  --color-type-next: #636363;
+  --color-type-lesson: #7c3aed;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
@@ -94,13 +96,16 @@ html, body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* 0 degil 0.01: tamamen saydam ilk boyamayi Chrome LCP saymiyor, olcum ya
+   hic olusmuyor ya animasyon sonrasindaki bir yeniden boyamaya kayiyordu.
+   Goz farki gormez. */
 @keyframes fade-in {
-  from { opacity: 0; }
+  from { opacity: 0.01; }
   to { opacity: 1; }
 }
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0.01; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -121,7 +126,8 @@ html, body {
 
 .prose-blog {
   font-family: var(--font-blog-serif), "Charter", "Iowan Old Style", Georgia, "Times New Roman", serif;
-  font-size: 17px;
+  /* 17px; rem ki tarayicidaki varsayilan yazi boyutu ayari yaziya da islesin. */
+  font-size: 1.0625rem;
   line-height: 1.7;
   color: var(--color-fg);
   letter-spacing: 0.005em;
@@ -138,10 +144,12 @@ html, body {
 .prose-blog h2 { font-size: 1.4em; font-weight: 600; line-height: 1.25; }
 .prose-blog h3 { font-size: 1.15em; font-weight: 600; line-height: 1.3; }
 .prose-blog p { color: var(--color-prose); }
+/* Alt cizgi --color-line iken zemine karsi 1.2:1'di, baglanti duz metinden
+   zor ayriliyordu; --color-faint ile seciliyor. */
 .prose-blog a {
   color: var(--color-fg);
   text-decoration: underline;
-  text-decoration-color: var(--color-line);
+  text-decoration-color: var(--color-faint);
   text-underline-offset: 4px;
   transition: text-decoration-color 0.2s;
 }
@@ -195,13 +203,20 @@ html, body {
   max-width: 100%;
   height: auto;
 }
+.prose-blog video {
+  display: block;
+  border-radius: 8px;
+  margin: 1.5em 0;
+  max-width: 100%;
+  height: auto;
+}
 
 /* Metin icinde gecen baglanti. Bu dort satir daha once anasayfa, 404 ve
    zero-to-hero icinde ayri ayri elle yaziliyordu. */
 @utility link-inline {
   color: var(--color-fg);
   text-decoration: underline;
-  text-decoration-color: var(--color-line);
+  text-decoration-color: var(--color-faint);
   text-underline-offset: 4px;
   transition: text-decoration-color 0.2s;
 
@@ -254,8 +269,6 @@ html, body {
     text-rendering: optimizeLegibility;
   }
 
-  #__next { height: 100%; }
-
   ::selection {
     background: var(--color-fg);
     color: var(--color-bg);
@@ -287,4 +300,13 @@ html, body {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+}
+
+/* Deney sayfalari temadan bagimsiz hep siyah zeminde; acik temada odak
+   cercevesi (--color-fg, neredeyse siyah) orada gorunmuyordu. Isaret deney
+   sayfalarinin <main>'inde. :has, cunku Tam ekran dugmesi <main>'in disinda.
+   [data-chrome] ile kapsanmadi: normal sayfalarda da var, acik temada beyaz
+   cerceve beyaz zeminde kaybolurdu. */
+html:has([data-lab-stage]) :focus-visible {
+  outline-color: #fafafa;
 }

@@ -7,7 +7,7 @@ export const metadata = experimentMetadata("attractors");
 
 export default function AttractorsPage() {
   return (
-    <main id="main" className="fixed inset-0 bg-black">
+    <main id="main" data-lab-stage className="fixed inset-0 bg-black">
       <ExperimentSchemas slug="attractors" />
       <LabExitLink />
 

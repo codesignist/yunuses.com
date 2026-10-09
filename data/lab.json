@@ -4,8 +4,10 @@
     "title": "Dragon",
     "tag": "Görsel",
     "date": "2026-08-21",
-    "description": "Çince ejderha esintili uzun bir yılan. Mouse'u takip eder, hareketsiz kalırsan kendi başına dolanmaya başlar. Gölge, Altın, Buz ve Çizim olmak üzere dört ayrı görünümü var.",
-    "cover": "/lab/covers/dragon.webp"
+    "description": "Çin ejderhası esintili uzun bir yılan. Mouse'u takip eder, hareketsiz kalırsan kendi başına dolanmaya başlar. Gölge, Altın, Buz ve Çizim olmak üzere dört ayrı görünümü var.",
+    "cover": "/lab/covers/dragon.webp",
+    "shareImage": "/lab/covers/dragon.jpg",
+    "prefetch": false
   },
   {
     "slug": "attractors",
@@ -13,7 +15,9 @@
     "tag": "Görsel",
     "date": "2026-05-25",
     "description": "Lorenz, Aizawa, Halvorsen, Thomas garip çekicileri. Tek bir denklem 200 bin adımda kelebek ve çiçek formları çıkarıyor. WebGL ile çiziliyor, etkileşimli.",
-    "cover": "/lab/covers/attractors.webp"
+    "cover": "/lab/covers/attractors.webp",
+    "shareImage": "/lab/covers/attractors.jpg",
+    "prefetch": false
   },
   {
     "slug": "flow",
@@ -21,14 +25,16 @@
     "tag": "Görsel",
     "date": "2026-05-10",
     "description": "WebGL2 üzerine yazılmış minimal bir akışkan simülasyonu. Tayf, Lav, Buz ve Kaos olmak üzere dört farklı renk modu var. Mouse veya dokunmatikle çalışır.",
-    "cover": "/lab/covers/flow.webp"
+    "cover": "/lab/covers/flow.webp",
+    "shareImage": "/lab/covers/flow.jpg"
   },
   {
     "slug": "3d-ping-pong",
     "title": "3D Ping Pong",
     "tag": "Oyun",
     "date": "2026-05-01",
-    "description": "Flash döneminden kalma 3D ping pong oyununun Canvas 2D üzerine yazılmış yeniden yorumu. Engine yok, perspektif elden hesaplanmış. Mouse ile oynanır.",
-    "cover": "/lab/covers/3d-ping-pong.webp"
+    "description": "Flash döneminden kalma 3D ping pong oyununun Canvas 2D üzerine yazılmış yeniden yorumu. Engine yok, perspektif elle hesaplanmış. Mouse veya dokunmatikle oynanır.",
+    "cover": "/lab/covers/3d-ping-pong.webp",
+    "shareImage": "/lab/covers/3d-ping-pong.jpg"
   }
 ]

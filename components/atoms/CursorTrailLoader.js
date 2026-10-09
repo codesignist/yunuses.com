@@ -1,10 +1,23 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 const CursorTrail = dynamic(() => import("./CursorTrail"), { ssr: false });
+
+// İz süs; chunk'ı yüklenemezse (deploy sonrası eski sekme, ağ hatası) hata
+// kök layout'tan yukarı çıkıp bütün sayfayı hata ekranına düşürüyordu.
+// Burada yutuluyor, sadece iz görünmüyor.
+class TrailBoundary extends Component {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 export default function CursorTrailLoader() {
   const pathname = usePathname();
@@ -33,5 +46,9 @@ export default function CursorTrailLoader() {
   // sayfasında çalışır.
   if (pathname && /^\/lab\/[^/]/.test(pathname)) return null;
   if (!enabled) return null;
-  return <CursorTrail />;
+  return (
+    <TrailBoundary>
+      <CursorTrail />
+    </TrailBoundary>
+  );
 }

@@ -24,7 +24,7 @@ Ben de verileri alıp her sürümün tüm efor seçeneklerini tek bir noktaya in
 
 ## Ters C nasıl oluştu?
 
-Turuncu Opus çizgisini takip edelim. Opus 4'ten başlayan çizgi 4.5, 4.6 ve 4.7 ile yukarı çıkarken bir yandan da sağa, yani daha pahalıya kayıyor. Opus 4.7'de ARC-AGI-2'deki bir görev için ortalama 4 dolar civarı harcanıyordu. Opus 5 ile çizgi yukarı çıkarken sola dönüyor, Opus 5.5 ile de sola doğru uzanmaya devam ediyor. Opus 5.5 aynı testte %87 başarıya görev başı 70 sent civarında ulaşıyor. Yani 4.7'nin neredeyse altıda biri maliyetle çok daha iyi bir sonuç.
+Turuncu Opus çizgisini takip edelim. Opus 4'ten başlayan çizgi 4.5, 4.6 ve 4.7 ile yukarı çıkarken bir yandan da sağa, yani daha pahalıya kayıyor. Opus 4.7'de ARC-AGI-2'deki bir görev için ortalama 4 dolar civarı harcanıyordu. Opus 4.8 aynı başarıyı daha ucuza verince çizgi sola kıvrılmaya başlıyor. Opus 5 ile hem yukarı hem sola gidiyor, Opus 5.5 ile de sola doğru uzanmaya devam ediyor. Opus 5.5 aynı testte %87 başarıya görev başı 70 sent civarında ulaşıyor. Yani 4.7'nin neredeyse altıda biri maliyetle çok daha iyi bir sonuç.
 
 Önce sağa gidip sonra geri dönen bu çizgi, grafikte ters çevrilmiş bir C harfi gibi duruyor.
 
@@ -42,7 +42,7 @@ Aslında burada iki güç birbirine karşı çalışıyor. Daha iyi sonuç genel
 
 Tabii şu anda sadece ARC-AGI-1 ve 2 sonuçlarına göre konuşuyoruz. Bu iki testte en iyi modeller %90'ın üzerine çıktı ve testler anlamını yitirmeye başladı. Tavana yaklaştıkça çizginin sola gitmesi de kolaylaşıyor.
 
-ARC-AGI-3 tarafında tablo bambaşka. Yakın zamana kadar bütün modeller %5'in altındaydı. Opus 5 ile %30'a, GPT-6 Astra ile ortalamada %45'e çıkıldı ama bir test koşusunun toplam maliyeti Opus 5'te 20 bin, Astra'da 40 bin dolar civarında. Yani burada çizgi hala sağa ve yukarı tırmanıyor. ARC-AGI-3'te ve bundan sonra çıkacak testlerde ters C formunun henüz en başında olabiliriz. Opus 5.5 ise ARC-AGI-3'te henüz ölçülmedi.
+ARC-AGI-3 tarafında tablo bambaşka. Yakın zamana kadar bütün modeller %5'in altındaydı. Opus 5 ile %30'a, GPT-6 Astra ile ortalamada %45'e çıkıldı ama bir test koşusunun toplam maliyeti Opus 5'te 20 bin, Astra'da 40 bin dolar civarında. Yani burada çizgi hâlâ sağa ve yukarı tırmanıyor. ARC-AGI-3'te ve bundan sonra çıkacak testlerde ters C formunun henüz en başında olabiliriz. Opus 5.5 ise ARC-AGI-3'te henüz ölçülmedi.
 
 ## Okurken küçük bir not
 
