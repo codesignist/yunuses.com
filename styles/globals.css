@@ -197,6 +197,41 @@ html, body {
   border-top: 1px solid var(--color-line);
   margin: 2.5em 0;
 }
+/* Tablo, cercevesi ve kosesiyle pre'nin yaninda durur. Rakamlar alt alta
+   hizali okunsun diye sans ve tabular-nums. Markdown'daki |---:| hizalamasi
+   satir ici style olarak geldigi icin buradaki text-align'i eziyor. */
+.prose-blog table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 0.875em;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+/* rem: th'nin yazisi daha kucuk, em olsa basliklar sutundan kayiyordu. */
+.prose-blog th,
+.prose-blog td {
+  padding: 0.65rem 0.9rem;
+  text-align: left;
+}
+.prose-blog th {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.prose-blog td {
+  border-top: 1px solid var(--color-line-soft);
+  color: var(--color-prose);
+}
+.prose-blog tbody tr:first-child td { border-top: 0; }
+.prose-blog tbody tr:hover td { background: var(--color-line-soft); }
 .prose-blog img {
   border-radius: 8px;
   margin: 1.5em 0;
