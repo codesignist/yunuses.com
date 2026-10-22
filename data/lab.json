@@ -1,5 +1,15 @@
 [
   {
+    "slug": "globe",
+    "title": "Globe",
+    "tag": "Veri",
+    "date": "2026-10-22",
+    "description": "Dünyanın şehirleri, gece uzaydan görünen ışıklar gibi; her ışığın büyüklüğü bir şehrin nüfusu. 1975'ten 2050'ye yılları oynatıp şehirlerin büyümesini izleyebilir, kendi şehrini bulup başka bir şehirle karşılaştırabilirsin. Veri BM'den.",
+    "cover": "/lab/covers/globe.webp",
+    "shareImage": "/lab/covers/globe.jpg",
+    "prefetch": false
+  },
+  {
     "slug": "dragon",
     "title": "Dragon",
     "tag": "Görsel",
