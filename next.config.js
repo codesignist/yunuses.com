@@ -65,10 +65,10 @@ const agentDiscoveryHeaders = [
   },
 ];
 
-// Dragon'un model ve dokuları sabit adlarla duruyor; Next public dosyaları
-// max-age=0 ile verdiği için her ziyarette yeniden soruluyordu. Adlar
-// sürümlenmediği için bir günle sınırlı.
-const dragonAssetHeaders = [
+// Dragon'un model ve dokuları, Globe'un verisi sabit adlarla duruyor; Next
+// public dosyaları max-age=0 ile verdiği için her ziyarette yeniden
+// soruluyordu. Adlar sürümlenmediği için bir günle sınırlı.
+const labAssetHeaders = [
   {
     key: "Cache-Control",
     value: "public, max-age=86400",
@@ -96,10 +96,14 @@ module.exports = {
         source: "/:path+/",
         headers: agentDiscoveryHeaders,
       },
-      // Sadece uzantılı dosyalar: /lab/dragon/ sayfasının kendisi dışarıda.
+      // Sadece uzantılı dosyalar: deney sayfalarının kendisi dışarıda.
       {
         source: "/lab/dragon/:file(.+\\.\\w+)",
-        headers: dragonAssetHeaders,
+        headers: labAssetHeaders,
+      },
+      {
+        source: "/lab/globe/:file(.+\\.\\w+)",
+        headers: labAssetHeaders,
       },
       // .obj için tanımlı bir tür yok, application/x-tgif ile gidince ne
       // Next ne Cloudflare sıkıştırıyordu. Düz metin olarak gzip'e giriyor.

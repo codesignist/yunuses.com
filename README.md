@@ -82,7 +82,7 @@ yunuses.com
 │   ├── api
 │   │   └── markdown          # sayfaların markdown karşılığı (proxy.js buraya yönlendirir)
 │   ├── blog                  # blog index + [slug] dinamik sayfa ve yazı OG görseli
-│   ├── lab                   # deneyler: dragon, attractors, flow, 3d-ping-pong
+│   ├── lab                   # deneyler: globe, dragon, attractors, flow, 3d-ping-pong
 │   ├── zero-to-hero          # mini ders sayfası (LessonsMap)
 │   ├── feed.xml              # RSS 2.0 endpoint
 │   ├── feed.json             # JSON Feed 1.1 endpoint
@@ -112,6 +112,7 @@ yunuses.com
 │   └── useLabKeys.js         # deneylerin ortak klavye kısayolları
 ├── public                    # statik varlıklar (avatar, og-image, favicon, lab dosyaları, vs.)
 ├── scripts
+│   ├── build-globe-data.mjs  # BM şehir nüfusu ve kara maskesinden Globe deneyinin verisini üretir
 │   └── generate-favicons.mjs # avatardan favicon ve manifest ikonlarını üretir
 ├── styles
 │   └── globals.css           # Tailwind CSS 4 + tema token'ları
