@@ -7,8 +7,9 @@
 // population.un.org/wup/downloads). Ham dosya ~60 MB, depoya girmiyor.
 // Kara: Natural Earth ne_50m_land.geojson (kamu mali).
 //
-// BM verisi 1975-2050 arasi yillik; dosya boyu icin bes yilda bir ornek
-// tutuluyor, aradaki yillari istemci dogrusal tamamliyor.
+// BM verisi 1975-2050 arasi yillik ve oyle kaliyor. Her sehrin serisi bir
+// onceki yila gore farklar halinde yaziliyor: dosya bes yilda bir ornegin
+// gzip'te ~23 KB fazlasi, karsiliginda ara yillar tahmin degil gercek.
 
 import { createReadStream } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -24,9 +25,9 @@ if (!csvPath || !landPath) {
 
 const OUT = resolve(process.cwd(), "public/lab/globe/data.json");
 const YEARS = [];
-for (let y = 1975; y <= 2050; y += 5) YEARS.push(y);
+for (let y = 1975; y <= 2050; y++) YEARS.push(y);
 const ANCHOR_YEAR = 2025;
-// Binlik birimde; herhangi bir orneklenen yilda bu esigi gecen sehir giriyor.
+// Binlik birimde; herhangi bir yilda bu esigi gecen sehir giriyor.
 const MIN_POP = 300;
 
 // Kara noktalari: enlem satirlari, her satirda cos(enlem) ile orantili
@@ -265,6 +266,9 @@ async function readCities(path) {
   const cities = new Map();
   const totals = new Map(YEARS.map((y) => [y, 0]));
   const counts = new Map(YEARS.map((y) => [y, 0]));
+  // Sehirlilerin agirlik merkezi: her sehrin o yilki konum vektoru nufusla
+  // agirliklanip toplaniyor, toplam yuzeye yansitiliyor.
+  const centroids = new Map(YEARS.map((y) => [y, [0, 0, 0]]));
   for await (const raw of rl) {
     const line = raw.replace(/^﻿/, "");
     if (!col) {
@@ -306,10 +310,31 @@ async function readCities(path) {
       c.pop.set(year, pop);
       totals.set(year, totals.get(year) + pop);
       counts.set(year, counts.get(year) + 1);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) {
+        const la = (lat * Math.PI) / 180;
+        const lo = (lon * Math.PI) / 180;
+        const v = centroids.get(year);
+        v[0] += pop * Math.cos(la) * Math.cos(lo);
+        v[1] += pop * Math.cos(la) * Math.sin(lo);
+        v[2] += pop * Math.sin(la);
+      }
     }
   }
-  return { cities: [...cities.values()], totals, counts };
+  return { cities: [...cities.values()], totals, counts, centroids };
 }
+
+function toLatLon([x, y, z]) {
+  const len = Math.hypot(x, y, z);
+  return [(Math.asin(z / len) * 180) / Math.PI, (Math.atan2(y, x) * 180) / Math.PI];
+}
+
+// Arama icin: buyuk/kucuk harf ve aksan farkini yok say.
+const plain = (s) =>
+  s
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/ı/g, "i")
+    .toLowerCase();
 
 function displayName(c) {
   const byCountry = TR_NAMES[`${c.iso2}:${c.name}`];
@@ -372,7 +397,7 @@ function buildLandMask(rings) {
 
 const round2 = (v) => Math.round(v * 100) / 100;
 
-const { cities, totals, counts } = await readCities(csvPath);
+const { cities, totals, counts, centroids } = await readCities(csvPath);
 
 const kept = cities
   .filter((c) => Number.isFinite(c.lat) && Math.max(0, ...c.pop.values()) >= MIN_POP)
@@ -383,14 +408,18 @@ const rows = kept.map((c) => {
   const name = displayName(c);
   if (/[^\p{Script=Latin}\p{N}\p{P}\p{Zs}\p{M}`'‘’]/u.test(name)) nonLatin.push(name);
   if (!c.iso2) console.warn(`ISO2 yok: ${c.name} (${c.location})`);
-  return [
-    name,
-    c.iso2 || c.location,
-    round2(c.lat),
-    round2(c.lon),
-    c.capital ? 1 : 0,
-    YEARS.map((y) => Math.round(c.pop.get(y) ?? 0)),
-  ];
+  let prev = 0;
+  const deltas = YEARS.map((y) => {
+    const v = Math.round(c.pop.get(y) ?? 0);
+    const d = v - prev;
+    prev = v;
+    return d;
+  });
+  const row = [name, c.iso2 || c.location, round2(c.lat), round2(c.lon), c.capital ? 1 : 0, deltas];
+  // BM'deki ad Turkce addan farkliysa aramada o da bulunsun ("Cairo",
+  // "New York City").
+  if (!plain(c.name).includes(plain(name))) row.push(c.name);
+  return row;
 });
 if (nonLatin.length) console.warn("Latin olmayan ad:", nonLatin.join(", "));
 
@@ -402,6 +431,9 @@ const data = {
   // Tum BM sehirlerinin (esik alti dahil) toplami ve sayisi; binlik birim.
   totals: YEARS.map((y) => Math.round(totals.get(y))),
   cityCounts: YEARS.map((y) => counts.get(y)),
+  // Yil basina [enlem, boylam], yine tum sehirlerden.
+  centroids: YEARS.flatMap((y) => toLatLon(centroids.get(y)).map(round2)),
+  // [ad, ulke, enlem, boylam, baskent, yillik farklar, BM adi?]
   cities: rows,
   land: { latMin: LAT_MIN, step: STEP, counts: land.counts, mask: land.mask },
 };
