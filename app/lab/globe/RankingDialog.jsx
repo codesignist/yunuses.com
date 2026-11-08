@@ -47,15 +47,15 @@ export default function RankingDialog({ open, data, ranking, year, onClose, onPi
         if (e.target === e.currentTarget) onClose();
       }}
       aria-labelledby="globe-ranking-title"
-      className="m-auto max-h-[min(80vh,720px)] w-[min(640px,calc(100vw-32px))] overflow-hidden rounded-lg border border-white/10 bg-[#07090d] p-0 text-white backdrop:bg-black/60 backdrop:backdrop-blur-sm"
+      className="m-auto max-h-[min(80vh,720px)] w-[min(640px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-black/[0.06] bg-white p-0 text-fg shadow-[0_32px_80px_-32px_rgba(15,23,42,0.4)] backdrop:bg-[rgba(15,23,42,0.16)] backdrop:backdrop-blur-[2px]"
     >
       <div className="flex max-h-[inherit] flex-col">
-        <header className="flex items-start justify-between gap-4 border-b border-white/10 p-4">
+        <header className="flex items-start justify-between gap-4 border-b border-line px-5 pt-5 pb-4">
           <div>
-            <h2 id="globe-ranking-title" className="text-[16px] font-medium tracking-tight">
+            <h2 id="globe-ranking-title" className="text-[17px] font-medium tracking-[-0.015em]">
               Bütün şehirler, {year}
             </h2>
-            <p className="mt-1 text-[12px] leading-snug text-white/55">
+            <p className="mt-1 text-[12px] leading-snug text-muted">
               Nüfusu 300 binin üstündeki {formatCount(total)} şehir. BM şehri belediye sınırına göre
               değil, bitişik yoğun yerleşime göre sayıyor.
             </p>
@@ -64,7 +64,7 @@ export default function RankingDialog({ open, data, ranking, year, onClose, onPi
             type="button"
             onClick={onClose}
             aria-label="Kapat"
-            className="grid size-8 shrink-0 place-items-center rounded text-white/60 transition hover:bg-white/10 hover:text-white"
+            className="-mr-1.5 -mt-1 grid size-8 shrink-0 place-items-center rounded-full text-faint transition hover:bg-black/[0.05] hover:text-fg"
           >
             <svg width="11" height="11" viewBox="0 0 10 10" aria-hidden="true">
               <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -72,51 +72,51 @@ export default function RankingDialog({ open, data, ranking, year, onClose, onPi
           </button>
         </header>
 
-        <div className="border-b border-white/10 px-4 py-3">
+        <div className="border-b border-line px-5 py-3">
           <input
             type="search"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Şehir ya da ülke"
             aria-label="Tabloda ara"
-            className="h-9 w-full rounded border border-white/10 bg-white/5 px-3 text-[14px] text-white placeholder:text-white/40 outline-none focus-visible:border-white/50 focus-visible:outline-none"
+            className="h-9 w-full rounded-full border border-line bg-white px-3.5 text-[14px] text-fg placeholder:text-faint outline-none focus-visible:border-black/30 focus-visible:outline-none"
           />
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <table className="w-full border-collapse text-[13px] tabular-nums">
-            <thead className="sticky top-0 bg-[#07090d] text-left text-[11px] text-white/45">
+            <thead className="sticky top-0 bg-white text-left text-[11px] text-faint">
               <tr>
-                <th scope="col" className="w-14 px-4 py-2 text-right font-normal">Sıra</th>
+                <th scope="col" className="w-14 px-5 py-2 text-right font-normal">Sıra</th>
                 <th scope="col" className="px-2 py-2 font-normal">Şehir</th>
                 <th scope="col" className="px-2 py-2 font-normal max-sm:hidden">Ülke</th>
-                <th scope="col" className="px-4 py-2 text-right font-normal">Nüfus</th>
+                <th scope="col" className="px-5 py-2 text-right font-normal">Nüfus</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((i) => (
-                <tr key={i} className="border-t border-white/5 hover:bg-white/5">
-                  <td className="px-4 py-1.5 text-right text-white/40">{ranking.rank[i]}</td>
+                <tr key={i} className="border-t border-line-soft hover:bg-black/[0.025]">
+                  <td className="px-5 py-1.5 text-right text-faint">{ranking.rank[i]}</td>
                   <td className="px-2 py-1.5">
                     <button
                       type="button"
                       onClick={() => onPick(i)}
-                      className="text-left text-white/85 underline-offset-2 hover:text-white hover:underline"
+                      className="text-left text-fg/85 underline-offset-2 hover:text-fg hover:underline"
                     >
                       {data.names[i]}
                     </button>
-                    <span className="ml-1.5 text-[11px] text-white/40 sm:hidden">
+                    <span className="ml-1.5 text-[11px] text-faint sm:hidden">
                       {countryName(data.countries[i])}
                     </span>
                   </td>
-                  <td className="px-2 py-1.5 text-white/55 max-sm:hidden">{countryName(data.countries[i])}</td>
-                  <td className="whitespace-nowrap px-4 py-1.5 text-right text-white/75">{formatPop(ranking.vals[i])}</td>
+                  <td className="px-2 py-1.5 text-muted max-sm:hidden">{countryName(data.countries[i])}</td>
+                  <td className="whitespace-nowrap px-5 py-1.5 text-right text-fg/75">{formatPop(ranking.vals[i])}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {rows.length === 0 && (
-            <p className="px-4 py-6 text-center text-[12px] text-white/55">Eşleşen şehir yok.</p>
+            <p className="px-5 py-6 text-center text-[12px] text-muted">Eşleşen şehir yok.</p>
           )}
         </div>
       </div>

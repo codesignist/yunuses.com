@@ -45,7 +45,10 @@
   --animate-fade-in-up: fade-in-up 0.7s ease-out both;
 }
 
-[data-theme="light"] {
+/* Acik zeminli deney sahnesi (data-lab-stage="light") sitenin temasindan
+   bagimsiz acik renkleri aliyor; kok layout'taki Tam ekran dugmesi de. */
+[data-theme="light"],
+html:has([data-lab-stage="light"]) {
   --color-bg: #ffffff;
   --color-fg: #0a0a0a;
   --color-muted: #525252;
@@ -59,7 +62,8 @@
 html {
   color-scheme: dark;
 }
-[data-theme="light"] {
+[data-theme="light"],
+html:has([data-lab-stage="light"]) {
   color-scheme: light;
 }
 
@@ -337,11 +341,12 @@ html, body {
   pointer-events: none;
 }
 
-/* Deney sayfalari temadan bagimsiz hep siyah zeminde; acik temada odak
+/* Deney sayfalari temadan bagimsiz siyah zeminde; acik temada odak
    cercevesi (--color-fg, neredeyse siyah) orada gorunmuyordu. Isaret deney
    sayfalarinin <main>'inde. :has, cunku Tam ekran dugmesi <main>'in disinda.
    [data-chrome] ile kapsanmadi: normal sayfalarda da var, acik temada beyaz
-   cerceve beyaz zeminde kaybolurdu. */
-html:has([data-lab-stage]) :focus-visible {
+   cerceve beyaz zeminde kaybolurdu. Acik sahne (Globe) bu kuraldan muaf;
+   orada --color-fg zaten koyu. */
+html:has([data-lab-stage]:not([data-lab-stage="light"])) :focus-visible {
   outline-color: #fafafa;
 }

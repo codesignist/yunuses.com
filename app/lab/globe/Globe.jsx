@@ -18,7 +18,7 @@ import RankingDialog from "./RankingDialog";
 import Search from "./Search";
 import Timeline from "./Timeline";
 import TopList from "./TopList";
-import { GLASS } from "./ui";
+import { RAISED } from "./ui";
 
 const VIEWS = { globe: "Küre", map: "Harita" };
 const VIEW_IDS = Object.keys(VIEWS);
@@ -79,8 +79,8 @@ export default function Globe() {
     const ctrl = new AbortController();
     loadGlobeData(ctrl.signal)
       .then((d) => {
-        // Acilista 1975'ten bugune oynuyor: loş bir Dunya, yillar akarken
-        // Guney Asya ve Afrika yaniyor. Hareketi azalt tercihinde dogrudan bugun.
+        // Acilista 1975'ten bugune oynuyor: yillar akarken Guney Asya ve
+        // Afrika'nin daireleri buyuyor. Hareketi azalt tercihinde dogrudan bugun.
         if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
           yearRef.current = FIRST_YEAR;
           stopAtRef.current = ESTIMATE_YEAR;
@@ -214,7 +214,7 @@ export default function Globe() {
     if (!playing) sceneRef.current?.setYear(year);
   }, [year, playing, status]);
 
-  // Oynatma: isiklar kesirli yillarla akiyor, arayuz tam yillarda yenileniyor.
+  // Oynatma: daireler kesirli yillarla akiyor, arayuz tam yillarda yenileniyor.
   useEffect(() => {
     if (!playing || status !== "ready") return;
     let raf = 0;
@@ -330,41 +330,42 @@ export default function Globe() {
   }, [data, year]);
 
   return (
-    <div className="absolute inset-0 bg-black">
+    <div className="absolute inset-0 bg-white">
       {/* Tuvali three kendisi ekliyor; ad kapsayicida. */}
       <div
         ref={containerRef}
         role="img"
-        aria-label="Dünya şehirlerinin nüfusunu ışık lekeleriyle gösteren küre"
+        aria-label="Dünya şehirlerinin nüfusunu dairelerle gösteren küre"
         className="absolute inset-0 touch-none select-none"
       />
 
       {/* data-chrome: sunucuda da ciziliyor, sayfanin markdown'ina girmesin. */}
       {status === "loading" && (
-        <div data-chrome className="fixed inset-0 z-30 flex items-center justify-center text-[12px] text-white/55 pointer-events-none">
+        <div data-chrome className="fixed inset-0 z-30 flex items-center justify-center text-[12px] text-faint pointer-events-none">
           Hazırlanıyor...
         </div>
       )}
 
       {status === "unsupported" && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center text-white/70 text-sm px-6 text-center">
+        <div className="absolute inset-0 z-30 flex items-center justify-center text-muted text-sm px-6 text-center">
           Tarayıcın bu deneyi çalıştıramıyor. Başka bir tarayıcıda ya da cihazda dene.
         </div>
       )}
 
       {status === "error" && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center text-white/70 text-sm px-6 text-center">
+        <div className="absolute inset-0 z-30 flex items-center justify-center text-muted text-sm px-6 text-center">
           Şehir verisi yüklenemedi. Sayfayı yenileyip tekrar dene.
         </div>
       )}
 
       {status === "ready" && ranking && (
         <>
+          {/* Beyaz bir hale: altindaki daireler yaziyi bozmasin. */}
           <div
             ref={centroidRef}
             data-chrome
             aria-hidden="true"
-            className="pointer-events-none absolute left-0 top-0 z-10 whitespace-nowrap text-[11px] text-[#dfe9ff]/80 [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]"
+            className="pointer-events-none absolute left-0 top-0 z-10 whitespace-nowrap text-[11px] text-muted [text-shadow:0_0_2px_#fff,0_0_4px_#fff,0_0_8px_#fff]"
             style={{ opacity: 0 }}
           >
             Şehirlilerin ağırlık merkezi
@@ -408,7 +409,7 @@ export default function Globe() {
           {selected >= 0 && (
             <div
               data-chrome
-              className="fixed inset-x-4 top-[68px] z-30 max-h-[52vh] overflow-y-auto rounded-lg md:inset-x-auto md:left-4 md:top-[76px] md:max-h-[calc(100vh-260px)] md:w-[300px]"
+              className="fixed inset-x-4 top-[68px] z-30 max-h-[52vh] overflow-y-auto rounded-2xl md:inset-x-auto md:left-4 md:top-[76px] md:max-h-[calc(100vh-260px)] md:w-[300px]"
             >
               <CityPanel
                 compact={!wide}
@@ -431,7 +432,7 @@ export default function Globe() {
             className="fixed inset-x-4 bottom-4 z-30 flex flex-col-reverse gap-3 pointer-events-none md:flex-row md:items-end md:justify-between"
           >
             <div className="flex flex-col items-start gap-2 pointer-events-auto">
-              <div data-chrome className="px-1 text-[12px] text-white/60 pointer-events-none">
+              <div data-chrome className="px-1 text-[12px] text-faint pointer-events-none [text-shadow:0_0_4px_#fff,0_0_8px_#fff]">
                 <span className="pointer-coarse:hidden">
                   {view === "globe" ? "Sürükleyerek döndür" : "Sürükleyerek kaydır"}, tekerlekle
                   yakınlaş, bir şehre tıkla.
@@ -442,12 +443,12 @@ export default function Globe() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <LabOptionBar options={VIEW_OPTIONS} active={view} onSelect={setView} />
+                <LabOptionBar tone="light" options={VIEW_OPTIONS} active={view} onSelect={setView} />
                 <button
                   type="button"
                   data-chrome
                   onClick={openRanking}
-                  className="h-[34px] rounded border border-white/10 bg-white/5 px-3 text-[12px] text-white/70 backdrop-blur-sm transition hover:bg-white/10 hover:text-white lg:hidden"
+                  className="h-[34px] rounded-lg border border-black/[0.07] bg-white/80 px-3 text-[12px] text-muted backdrop-blur-md transition hover:bg-white hover:text-fg lg:hidden"
                 >
                   Sıralama
                 </button>
@@ -483,15 +484,15 @@ export default function Globe() {
 function Tooltip({ data, i, year, rank }) {
   const pop = popAt(data, i, year);
   return (
-    <div className={`${GLASS} bg-black/70 px-3 py-2.5`}>
-      <div className="truncate text-[15px] font-medium leading-tight text-white">{data.names[i]}</div>
-      <div className="mt-0.5 text-[11px] text-white/50">{countryName(data.countries[i])}</div>
-      <div className="mt-1.5 flex items-baseline justify-between gap-3">
-        <span className="text-[17px] font-light leading-none tabular-nums text-white">
+    <div className={`${RAISED} rounded-xl px-3.5 py-3`}>
+      <div className="truncate text-[15px] font-medium leading-tight tracking-[-0.01em] text-fg">{data.names[i]}</div>
+      <div className="mt-0.5 text-[11px] text-faint">{countryName(data.countries[i])}</div>
+      <div className="mt-2 flex items-baseline justify-between gap-3">
+        <span className="text-[18px] font-light leading-none tracking-[-0.01em] tabular-nums text-fg">
           {pop > 0 ? formatPop(pop) : "Veri yok"}
         </span>
         {pop >= RANK_FLOOR && (
-          <span className="text-[11px] tabular-nums text-white/50">Dünyada {rank}.</span>
+          <span className="text-[11px] tabular-nums text-faint">Dünyada {rank}.</span>
         )}
       </div>
     </div>

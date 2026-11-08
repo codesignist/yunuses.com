@@ -1,7 +1,7 @@
 "use client";
 import { useLayoutEffect, useRef } from "react";
 import { countryName, formatPop } from "./data";
-import { GLASS } from "./ui";
+import { VEIL } from "./ui";
 
 export default function TopList({ data, ranking, selected, onHover, onPick, onShowAll }) {
   const listRef = useRef(null);
@@ -36,13 +36,13 @@ export default function TopList({ data, ranking, selected, onHover, onPick, onSh
   const max = ranking.vals[ranking.top[0]] || 1;
 
   return (
-    <div data-chrome className={`${GLASS} p-3`}>
+    <div data-chrome className={`${VEIL} rounded-2xl p-3`}>
       <div className="flex items-baseline justify-between px-1">
-        <h2 className="text-[12px] text-white/55">En kalabalık şehirler</h2>
+        <h2 className="text-[12px] text-muted">En kalabalık şehirler</h2>
         <button
           type="button"
           onClick={onShowAll}
-          className="-mr-1 rounded px-1 text-[11px] text-white/55 transition hover:bg-white/10 hover:text-white"
+          className="-mr-1 rounded px-1 text-[11px] text-faint transition hover:text-fg"
         >
           Tümünü gör
         </button>
@@ -67,26 +67,26 @@ export default function TopList({ data, ranking, selected, onHover, onPick, onSh
                 }}
                 onBlur={() => onHover(-1)}
                 className={`group relative flex w-full items-baseline gap-2.5 rounded px-1 pt-1.5 pb-2 text-left transition-colors ${
-                  isSel ? "text-white" : "text-white/80 hover:text-white"
+                  isSel ? "text-fg" : "text-fg/80 hover:text-fg"
                 }`}
               >
-                <span className="w-4 shrink-0 text-right text-[11px] tabular-nums text-white/40">
+                <span className="w-4 shrink-0 text-right text-[11px] tabular-nums text-faint">
                   {r + 1}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[14px]">
                   {data.names[i]}
-                  <span className="ml-1.5 text-[11px] text-white/40">
+                  <span className="ml-1.5 text-[11px] text-faint">
                     {countryName(data.countries[i])}
                   </span>
                 </span>
-                <span className="shrink-0 text-[12px] tabular-nums text-white/70">
+                <span className="shrink-0 text-[12px] tabular-nums text-muted">
                   {formatPop(ranking.vals[i])}
                 </span>
-                {/* Cubuk birinciye gore orantili, sifirdan basliyor. */}
+                {/* Cubuk birinciye gore orantili, sifirdan basliyor; renk kuredeki dairelerle ayni. */}
                 <span
                   aria-hidden="true"
-                  className={`absolute bottom-0.5 left-[30px] right-1 h-px origin-left transition-[background-color,transform] duration-300 ${
-                    isSel ? "bg-[#f39a3d]" : "bg-[#f39a3d]/45 group-hover:bg-[#f39a3d]"
+                  className={`absolute bottom-0.5 left-[30px] right-1 h-[2px] origin-left rounded-full transition-[background-color,transform] duration-300 ${
+                    isSel ? "bg-[#2443b5]" : "bg-[#2443b5]/25 group-hover:bg-[#2443b5]"
                   }`}
                   style={{ transform: `scaleX(${ranking.vals[i] / max})` }}
                 />

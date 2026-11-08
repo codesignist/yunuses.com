@@ -11,7 +11,7 @@ import {
   growthSentence,
   popAt,
 } from "./data";
-import { GLASS, SERIES } from "./ui";
+import { RAISED, SERIES } from "./ui";
 
 const TICKS = [1975, 2000, 2025, 2050];
 
@@ -41,14 +41,14 @@ export default function CityPanel({
   return (
     <section
       aria-label={`${data.names[i]} ayrıntıları`}
-      className={`${GLASS} bg-black/65 ${compact ? "p-3.5" : "p-4"}`}
+      className={`${RAISED} rounded-2xl ${compact ? "p-3.5" : "p-4"}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-[18px] font-medium leading-tight tracking-tight text-white">
+          <h2 className="truncate text-[19px] font-medium leading-tight tracking-[-0.015em] text-fg">
             {data.names[i]}
           </h2>
-          <p className="mt-0.5 text-[12px] text-white/55">
+          <p className="mt-0.5 text-[12px] text-faint">
             {data.capital[i] ? `${country}, başkent` : country}
           </p>
         </div>
@@ -56,7 +56,7 @@ export default function CityPanel({
           type="button"
           onClick={onClose}
           aria-label="Kapat"
-          className="-mr-1.5 -mt-1 grid size-7 shrink-0 place-items-center rounded text-white/55 transition hover:bg-white/10 hover:text-white"
+          className="-mr-1.5 -mt-1 grid size-7 shrink-0 place-items-center rounded-full text-faint transition hover:bg-black/[0.05] hover:text-fg"
         >
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
             <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -65,14 +65,14 @@ export default function CityPanel({
       </div>
 
       <div className={`${compact ? "mt-2" : "mt-3"} flex items-baseline justify-between gap-3`}>
-        <div className="text-[26px] font-light leading-none tracking-tight tabular-nums text-white">
+        <div className="text-[30px] font-extralight leading-none tracking-[-0.03em] tabular-nums text-fg">
           {pop > 0 ? formatPop(pop) : "Veri yok"}
         </div>
-        <div className="text-[12px] tabular-nums text-white/55">
+        <div className="text-[12px] tabular-nums text-faint">
           {hoverYear ? hoverYear : pop >= RANK_FLOOR ? `Dünyada ${rank}.` : ""}
         </div>
       </div>
-      <p className="mt-1.5 min-h-[1.4em] text-[12px] leading-snug text-white/60">
+      <p className="mt-2 min-h-[1.4em] text-[12px] leading-snug text-muted">
         {pop > 0 ? (growth ? `${growth}.` : "") : first ? `${first} öncesi için BM verisi yok.` : ""}
       </p>
 
@@ -93,19 +93,19 @@ export default function CityPanel({
             return (
               <li key={c} className="flex items-center gap-2 text-[12px]">
                 <span aria-hidden="true" className="h-0.5 w-3 shrink-0 rounded-full" style={{ background: SERIES[k] }} />
-                <span className="min-w-0 flex-1 truncate text-white/85">
+                <span className="min-w-0 flex-1 truncate text-fg/85">
                   {data.names[c]}
                   {k === 1 && !hoverYear && v >= RANK_FLOOR && (
-                    <span className="ml-1.5 text-[11px] text-white/45">Dünyada {compareRank}.</span>
+                    <span className="ml-1.5 text-[11px] text-faint">Dünyada {compareRank}.</span>
                   )}
                 </span>
-                <span className="shrink-0 tabular-nums text-white/70">{v > 0 ? formatPop(v) : "veri yok"}</span>
+                <span className="shrink-0 tabular-nums text-muted">{v > 0 ? formatPop(v) : "veri yok"}</span>
                 {k === 1 ? (
                   <button
                     type="button"
                     onClick={onClearCompare}
                     aria-label={`${data.names[c]} karşılaştırmasını kaldır`}
-                    className="grid size-5 shrink-0 place-items-center rounded text-white/45 transition hover:bg-white/10 hover:text-white"
+                    className="grid size-5 shrink-0 place-items-center rounded-full text-faint transition hover:bg-black/[0.05] hover:text-fg"
                   >
                     <svg width="8" height="8" viewBox="0 0 10 10" aria-hidden="true">
                       <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -119,24 +119,24 @@ export default function CityPanel({
           })}
         </ul>
       ) : comparing ? (
-        <p className="mt-2 text-[12px] leading-snug text-white/60">
+        <p className="mt-2 text-[12px] leading-snug text-muted">
           Karşılaştırmak için bir şehir ara ya da küreden seç.
         </p>
       ) : (
         <button
           type="button"
           onClick={onStartCompare}
-          className="mt-2 -ml-1 rounded px-1 py-0.5 text-[12px] text-white/70 transition hover:bg-white/10 hover:text-white"
+          className="mt-2 -ml-1.5 rounded-full px-1.5 py-0.5 text-[12px] text-muted transition hover:bg-black/[0.05] hover:text-fg"
         >
           Başka bir şehirle karşılaştır
         </button>
       )}
 
-      <details className={`${compact ? "mt-2 pt-2" : "mt-3 pt-2.5"} border-t border-white/10`}>
-        <summary className="cursor-pointer list-none text-[11px] text-white/45 transition hover:text-white/75 [&::-webkit-details-marker]:hidden">
+      <details className={`${compact ? "mt-2 pt-2" : "mt-3 pt-2.5"} border-t border-line`}>
+        <summary className="cursor-pointer list-none text-[11px] text-faint transition hover:text-fg [&::-webkit-details-marker]:hidden">
           Şehir nasıl sayıldı?
         </summary>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-white/55">
+        <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
           BM burada şehri belediye sınırına göre değil, birbirine bitişik yoğun yerleşime göre
           sayıyor. Bu yüzden rakamlar resmi nüfustan farklı olabilir; bazı büyük şehirlerin
           çevresindeki yerleşimler ayrı şehir olarak görünebilir.
@@ -232,17 +232,17 @@ function Chart({ data, series, year, height, hoverYear, onHoverYear }) {
           onPointerDown={onMove}
           onPointerLeave={() => onHoverYear(null)}
         >
-          <line x1="0" x2={W} y1={top} y2={top} stroke="rgba(255,255,255,0.08)" />
-          <text x="0" y={top - 4} fontSize="10" fill="rgba(255,255,255,0.4)">
+          <line x1="0" x2={W} y1={top} y2={top} stroke="#ececec" />
+          <text x="0" y={top - 4} fontSize="10" fill="#737373">
             {yMaxLabel}
           </text>
-          <line x1="0" x2={W} y1={top + plotH} y2={top + plotH} stroke="rgba(255,255,255,0.16)" />
+          <line x1="0" x2={W} y1={top + plotH} y2={top + plotH} stroke="#d4d4d4" />
           <line
             x1={x(marks)}
             x2={x(marks)}
             y1={top}
             y2={top + plotH}
-            stroke={hoverYear ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.18)"}
+            stroke={hoverYear ? "#a3a3a3" : "#e5e5e5"}
           />
           {series.map((c, k) => {
             const { past, future } = paths(c);
@@ -264,7 +264,7 @@ function Chart({ data, series, year, height, hoverYear, onHoverYear }) {
           {series.map((c, k) => {
             const v = popAt(data, c, marks);
             return v > 0 ? (
-              <circle key={c} cx={x(marks)} cy={yy(v)} r="4" fill={SERIES[k]} stroke="#07090d" strokeWidth="2" />
+              <circle key={c} cx={x(marks)} cy={yy(v)} r="4" fill={SERIES[k]} stroke="#fff" strokeWidth="2" />
             ) : null;
           })}
           {TICKS.map((t) => (
@@ -273,7 +273,7 @@ function Chart({ data, series, year, height, hoverYear, onHoverYear }) {
               x={x(t)}
               y={H - 2}
               fontSize="10"
-              fill="rgba(255,255,255,0.4)"
+              fill="#737373"
               textAnchor={t === FIRST_YEAR ? "start" : t === LAST_YEAR ? "end" : "middle"}
               style={{ fontVariantNumeric: "tabular-nums" }}
             >

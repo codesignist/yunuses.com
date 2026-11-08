@@ -8,7 +8,7 @@ const FOV = 30;
 // karsidan bakinca hepsi kameraya dogru uzanip noktaya donuyordu.
 const TILT = -0.92;
 const MAX_H = R * 0.42;
-// En kalabalik sehrin isik lekesinin yaricapi. Leke alani nufusla orantili:
+// En kalabalik sehrin dairesinin yaricapi. Daire alani nufusla orantili:
 // yaricap karekokle buyuyor.
 const DISC_R = R * 0.07;
 const LAND_STEP = 0.7 * D2R;
@@ -40,22 +40,27 @@ const MAP_H = (EE_TOP - EE_BOTTOM) * R * MAP_K;
 // boylama cevirmek icin.
 const MAP_PER_RAD = equalEarth(0, 1)[0] * R * MAP_K;
 
+// Beyaz zeminde mat beyaz bir kure: isik sol ust onden, golgeli yan ve
+// kenar soguk bir griye donuyor, zemine yumusak bir golge dusuyor.
 const COLORS = {
-  backdrop: 0x0c1828,
-  body: 0x03060b,
-  rim: 0x1a2c46,
-  atmosphere: 0x5682c0,
-  land: 0x9db3d4,
-  grid: 0x9db3d4,
-  // Sodyum lamba rampasi: kucuk sehir koyu kehribar, mega kent beyaza
-  // yakin. Gece uydudan gorunen sehir isiklarinin rengi.
-  low: 0xa14d17,
-  mid: 0xf39a3d,
-  high: 0xffe9c8,
-  // Karsilastirilan sehir ve agirlik merkezi soguk tonda: isiklardan ayrissin.
-  compare: 0x7fa8f0,
-  centroid: 0xdfe9ff,
+  lit: 0xffffff,
+  shade: 0xe1e5eb,
+  rim: 0xcfd6df,
+  shadow: 0x1a2332,
+  land: 0x8f99a6,
+  grid: 0x64748b,
+  // Porselen uzerindeki kobalt: kucuk sehir biraz acik, mega kent biraz
+  // koyu; aralik dar tutuldu ki saydam yikamalar griye kaymasin. En acik
+  // ton da beyaz uzerinde 4:1.
+  low: 0x5a78d8,
+  mid: 0x2443b5,
+  high: 0x1b2f8f,
+  // Karsilastirilan sehir kirmizi (ui.js'teki ikinci seri); secim halkasi
+  // ve agirlik merkezi murekkep.
+  compare: 0xd3402f,
+  ink: 0x0b1020,
 };
+const LIGHT = new THREE.Vector3(-0.45, 0.55, 0.7).normalize();
 
 const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const smoothstep = (a, b, x) => {
@@ -115,6 +120,11 @@ const MORPH_GLSL = /* glsl */ `
     float f = dot(normalize(worldNormal), normalize(cameraPosition - worldPos));
     return mix(smoothstep(0.0, 0.5, f), 1.0, uMorph);
   }
+  // Kure govdesiyle ayni isik (0 golge, 1 tam isik); haritada duz.
+  uniform vec3 uLight;
+  float lit(vec3 worldNormal) {
+    return mix(smoothstep(-0.35, 1.0, dot(normalize(worldNormal), uLight)), 1.0, uMorph);
+  }
 `;
 
 const RAMP_GLSL = /* glsl */ `
@@ -126,7 +136,7 @@ const RAMP_GLSL = /* glsl */ `
   }
 `;
 
-// Nufus orani (0..1) ile renk konumu logaritmik; boyut (leke alani, sutun
+// Nufus orani (0..1) ile renk konumu logaritmik; boyut (daire alani, sutun
 // boyu) dogrusal. Renk olmasa 300 binlik sehirlerin hepsi ayni sonuk
 // tonda kalirdi.
 const MAG_GLSL = /* glsl */ `
@@ -138,7 +148,6 @@ const MAG_GLSL = /* glsl */ `
   uniform float uSel;
   uniform float uCmp;
   float isIdx(float idx, float u) { return 1.0 - step(0.5, abs(idx - u)); }
-  float highlight(float idx) { return max(isIdx(idx, uHover), isIdx(idx, uSel)); }
 `;
 
 const LAND_VS = /* glsl */ `
@@ -146,22 +155,27 @@ const LAND_VS = /* glsl */ `
   attribute vec2 aLL;
   uniform float uSize;
   varying float vA;
+  varying float vLit;
   void main() {
     vec4 wp = modelMatrix * vec4(morphPos(aLL.x, aLL.y, 0.6), 1.0);
-    vA = limbFade(wp.xyz, mat3(modelMatrix) * morphUp(aLL.x, aLL.y));
+    vec3 n = mat3(modelMatrix) * morphUp(aLL.x, aLL.y);
+    vA = limbFade(wp.xyz, n);
+    vLit = lit(n);
     gl_Position = projectionMatrix * viewMatrix * wp;
     gl_PointSize = uSize;
   }
 `;
 
+// Noktalar govdeyle birlikte golgede koyulasiyor; kure tek parca okunuyor.
 const LAND_FS = /* glsl */ `
   uniform vec3 uColor;
   uniform float uAlpha;
   varying float vA;
+  varying float vLit;
   void main() {
     float d = length(gl_PointCoord - 0.5);
     if (d > 0.5) discard;
-    gl_FragColor = vec4(uColor, smoothstep(0.5, 0.2, d) * vA * uAlpha);
+    gl_FragColor = vec4(uColor * mix(0.86, 1.0, vLit), smoothstep(0.5, 0.25, d) * vA * uAlpha);
   }
 `;
 
@@ -191,9 +205,10 @@ const GRID_FS = /* glsl */ `
   }
 `;
 
-// Her sehir yuzeye yatik bir isik lekesi: kureye teget bir dortgen, kenara
-// yaklastikca perspektifle basiliyor. Sutunun aksine her acidan ayni
-// okunuyor. Cekirdek yaricapi alanla orantili; hale onun 2,5 kati.
+// Her sehir yuzeye yatik bir daire: kureye teget bir dortgen, kenara
+// yaklastikca perspektifle basiliyor. Yaricap alanla orantili. Ekranda
+// kucuk kalan daireler dolu nokta; buyukler ince kenarli, yari saydam bir
+// murekkep yikamasi, ust uste bindikce koyulasiyor.
 const DISC_VS = /* glsl */ `
   ${MORPH_GLSL}
   ${MAG_GLSL}
@@ -202,10 +217,16 @@ const DISC_VS = /* glsl */ `
   attribute float aIdx;
   uniform float uDiscR;
   uniform float uMinR;
+  // Cihaz pikseli / dunya birimi ve piksel orani: kenar ve halka
+  // kalinliklari ekranda sabit.
+  uniform float uPpu;
+  uniform float uPR;
   varying vec2 vUv;
   varying float vMag;
-  varying float vHi;
+  varying float vHov;
+  varying float vSel;
   varying float vCmp;
+  varying float vSolid;
   varying float vA;
   void main() {
     vec3 c = morphPos(aLL.x, aLL.y, 1.2);
@@ -213,13 +234,18 @@ const DISC_VS = /* glsl */ `
     vec3 east = normalize(cross(vec3(0.0, 1.0, 0.0), up));
     vec3 north = cross(up, east);
     vMag = magnitude(aH);
-    vHi = highlight(aIdx);
+    vHov = isIdx(aIdx, uHover);
+    vSel = isIdx(aIdx, uSel);
     vCmp = isIdx(aIdx, uCmp);
-    float r = max(uDiscR * sqrt(aH), uMinR) * (1.0 + max(vHi, vCmp) * 0.25);
-    vec3 p = c + (east * position.x + north * position.y) * r * 2.5;
+    float r = max(uDiscR * sqrt(aH), uMinR);
+    float rPx = r * uPpu;
+    vSolid = 1.0 - smoothstep(1.5 * uPR, 9.0 * uPR, rPx);
+    // Dortgen daireden biraz genis: kenar yumusatmasi ve secim halkasi icin.
+    float s = 1.0 + (2.0 + vSel * 6.0) * uPR / max(rPx, 0.5);
+    vec3 p = c + (east * position.x + north * position.y) * r * s;
     vec4 wp = modelMatrix * vec4(p, 1.0);
     vA = limbFade(wp.xyz, mat3(modelMatrix) * up);
-    vUv = position.xy;
+    vUv = position.xy * s;
     gl_Position = projectionMatrix * viewMatrix * wp;
     if (aH <= 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
   }
@@ -228,27 +254,39 @@ const DISC_VS = /* glsl */ `
 const DISC_FS = /* glsl */ `
   ${RAMP_GLSL}
   uniform vec3 uCmpColor;
+  uniform vec3 uInk;
   uniform float uAlpha;
+  uniform float uFill;
+  uniform float uPR;
   varying vec2 vUv;
   varying float vMag;
-  varying float vHi;
+  varying float vHov;
+  varying float vSel;
   varying float vCmp;
+  varying float vSolid;
   varying float vA;
   void main() {
     float d = length(vUv);
-    if (d > 1.0) discard;
-    // Cekirdegin kenari d = 0.4'te (yaricap r), disi hale.
-    float core = 1.0 - smoothstep(0.35, 0.4, d);
-    float halo = pow(1.0 - d, 2.6) * 0.6;
-    // Secili ve karsilastirilan sehirde cekirdegin cevresinde ince halka.
-    float mark = max(vHi, vCmp);
-    float ring = mark * (smoothstep(0.4, 0.43, d) - smoothstep(0.48, 0.53, d));
-    vec3 col = ramp(vMag);
-    col = mix(col, vec3(1.0), (1.0 - smoothstep(0.0, 0.4, d)) * 0.4 * vMag);
-    col = mix(col, vec3(1.0), vHi * 0.6);
-    col = mix(col, uCmpColor, vCmp * 0.85);
-    float a = (core * 0.7 + halo) * mix(0.7 + 0.3 * vMag, 1.0, mark) + ring;
-    gl_FragColor = vec4(col, a * vA * uAlpha);
+    // Kenara piksel cinsinden uzaklik (iceride eksi). Turevle: kenara yatik
+    // dairelerde de cizgi ayni incelikte.
+    float e = (d - 1.0) / max(fwidth(d), 1e-4);
+    float mark = max(vHov, vSel);
+    float inside = clamp(0.5 - e, 0.0, 1.0);
+    float ring = inside * clamp(e + uPR * (1.0 + 0.6 * mark) + 0.5, 0.0, 1.0);
+    // Secili sehirde beyaz bir araliktan sonra ikinci, ince bir halka.
+    float halo = vSel * clamp(0.75 * uPR + 0.5 - abs(e - 3.5 * uPR), 0.0, 1.0);
+    if (inside + halo <= 0.0) discard;
+
+    // Yikama rampanin ortasindan koyu olmuyor: koyu tonun saydami griye kayiyor.
+    vec3 fillC = mix(ramp(min(vMag, 0.5)), uCmpColor, vCmp);
+    vec3 ringC = mix(mix(ramp(vMag), uInk, mark), uCmpColor, vCmp);
+    float fillA = inside * max(mix(uFill, 0.92, vSolid), max(mark, vCmp) * 0.4);
+    float ringA = ring * mix(0.75, 1.0, max(mark, vCmp));
+    float a = ringA + fillA * (1.0 - ringA);
+    vec3 col = (ringC * ringA + fillC * fillA * (1.0 - ringA)) / max(a, 1e-4);
+    float haloA = halo * 0.9 * (1.0 - a);
+    col = mix(col, uInk, haloA / max(a + haloA, 1e-4));
+    gl_FragColor = vec4(col, (a + haloA) * vA * uAlpha);
   }
 `;
 
@@ -266,7 +304,7 @@ const SPIKE_VS = /* glsl */ `
   varying float vT;
   varying float vX;
   varying float vMag;
-  varying float vHi;
+  varying float vMark;
   varying float vCmp;
   void main() {
     vec3 wb = (modelMatrix * vec4(morphPos(aLL.x, aLL.y, 1.2), 1.0)).xyz;
@@ -275,13 +313,13 @@ const SPIKE_VS = /* glsl */ `
     float sl = length(side);
     side = sl > 1e-4 ? side / sl : vec3(1.0, 0.0, 0.0);
     vMag = magnitude(aH);
-    vHi = highlight(aIdx);
+    vMark = max(isIdx(aIdx, uHover), isIdx(aIdx, uSel));
     vCmp = isIdx(aIdx, uCmp);
-    // Dortgen cekirdegin uc kati genis: kenarlar yumusak hale.
-    float w = uWidth * (0.7 + 1.5 * vMag) * (1.0 + max(vHi, vCmp) * 0.9) * 3.0;
-    vec3 p = wb + wu * (aH * uMaxH * uSpike * position.y) + side * (w * position.x);
+    // uWidth cubugun tam genisligi; dortgen kenar yumusatmasi icin %40 genis.
+    float w = uWidth * (0.7 + 1.5 * vMag) * (1.0 + max(vMark, vCmp) * 0.9);
+    vec3 p = wb + wu * (aH * uMaxH * uSpike * position.y) + side * (w * 1.4 * position.x);
     vT = position.y;
-    vX = position.x * 2.0;
+    vX = position.x * 2.8;
     gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
   }
 `;
@@ -289,25 +327,25 @@ const SPIKE_VS = /* glsl */ `
 const SPIKE_FS = /* glsl */ `
   ${RAMP_GLSL}
   uniform vec3 uCmpColor;
+  uniform vec3 uInk;
   varying float vT;
   varying float vX;
   varying float vMag;
-  varying float vHi;
+  varying float vMark;
   varying float vCmp;
   void main() {
-    float ax = abs(vX);
-    float core = 1.0 - smoothstep(0.2, 0.34, ax);
-    float halo = pow(1.0 - ax, 3.0) * 0.3;
-    // Uca dogru parlayan sutun: deger tepede okunuyor.
-    float lift = mix(0.45, 1.0, vT);
-    vec3 col = mix(ramp(vMag), vec3(1.0), vHi * 0.7);
-    col = mix(col, uCmpColor, vCmp * 0.85);
-    float a = (core + halo) * lift * mix(0.65 + 0.35 * vMag, 1.0, max(vHi, vCmp));
+    float e = (abs(vX) - 1.0) / max(fwidth(vX), 1e-4);
+    float cov = clamp(0.5 - e, 0.0, 1.0);
+    if (cov <= 0.0) discard;
+    // Tabandan tepeye koyulasan cubuk: deger tepede okunuyor.
+    vec3 col = mix(ramp(vMag), uInk, vMark * 0.85);
+    col = mix(col, uCmpColor, vCmp);
+    float a = cov * mix(0.32, 1.0, vT) * mix(0.75 + 0.25 * vMag, 1.0, max(vMark, vCmp));
     gl_FragColor = vec4(col, a);
   }
 `;
 
-// Agirlik merkezinin yillik izi: gecilmis yillar parlak, gelecek sonuk.
+// Agirlik merkezinin yillik izi: gecilmis yillar koyu, gelecek soluk.
 const TRAIL_VS = /* glsl */ `
   ${MORPH_GLSL}
   attribute vec2 aLL;
@@ -332,7 +370,7 @@ const TRAIL_FS = /* glsl */ `
   void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
     if (d > 1.0) discard;
-    float a = (1.0 - smoothstep(0.55, 1.0, d)) * mix(0.25, 0.9, vPast);
+    float a = (1.0 - smoothstep(0.55, 1.0, d)) * mix(0.18, 0.6, vPast);
     gl_FragColor = vec4(uColor, a * vA);
   }
 `;
@@ -350,15 +388,18 @@ const MARKER_VS = /* glsl */ `
   }
 `;
 
+// Halka ve ortada nokta; ici beyaz ki altindaki daireler halkayi bulandirmasin.
 const MARKER_FS = /* glsl */ `
   uniform vec3 uColor;
   varying float vA;
   void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
     if (d > 1.0) discard;
-    float ring = smoothstep(0.6, 0.7, d) - smoothstep(0.84, 0.96, d);
+    float disc = 1.0 - smoothstep(0.84, 0.96, d);
+    float ring = smoothstep(0.58, 0.68, d) * disc;
     float pip = 1.0 - smoothstep(0.2, 0.3, d);
-    gl_FragColor = vec4(uColor, max(ring, pip) * vA);
+    float ink = max(ring, pip);
+    gl_FragColor = vec4(mix(vec3(1.0), uColor, ink), max(ink, disc * 0.85) * vA);
   }
 `;
 
@@ -373,54 +414,47 @@ const BODY_VS = /* glsl */ `
   }
 `;
 
+// Mat porselen: sol ust onden genis bir isik, golgeli yan soguk gri. Kenarda
+// ince bir koyulasma beyaz kureyi beyaz zeminden ayiriyor.
 const BODY_FS = /* glsl */ `
-  uniform vec3 uBody;
+  uniform vec3 uLit;
+  uniform vec3 uShade;
   uniform vec3 uRim;
+  uniform vec3 uLight;
   varying vec3 vN;
   varying vec3 vV;
   void main() {
-    float f = 1.0 - max(dot(normalize(vN), normalize(vV)), 0.0);
-    gl_FragColor = vec4(uBody + uRim * pow(f, 3.0), 1.0);
+    vec3 n = normalize(vN);
+    vec3 col = mix(uShade, uLit, smoothstep(-0.35, 1.0, dot(n, uLight)));
+    float f = 1.0 - max(dot(n, normalize(vV)), 0.0);
+    gl_FragColor = vec4(mix(col, uRim, pow(f, 3.0) * 0.8), 1.0);
   }
 `;
 
-// Arka yuzleri cizilen biraz buyuk bir kure. Parlama kurenin kenarinda en
-// guclu, dis sinira dogru sifira iniyor; kurenin arkasina dusen kismi
-// derinlik testi sakliyor.
-const ATMO_FS = /* glsl */ `
+// Kurenin arkasinda, ekrana bakan bir duzlemde golge: isik sol ust onde
+// oldugu icin sag alta kayik genis bir yumusak golge, bir de kenari saran
+// ince bir temas golgesi. Duzlem kurenin ortasindan geciyor; kurenin
+// kapladigi kismi derinlik testi sakliyor. Acik degradede bant olusmasin
+// diye bir bitlik gurultu.
+const SHADOW_VS = /* glsl */ `
+  varying vec2 vP;
+  void main() {
+    vP = position.xy;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const SHADOW_FS = /* glsl */ `
   uniform vec3 uColor;
-  uniform float uEdge;
   uniform float uOpacity;
-  varying vec3 vN;
-  varying vec3 vV;
+  uniform float uR;
+  varying vec2 vP;
   void main() {
-    float f = -dot(normalize(vN), normalize(vV));
-    float g = pow(smoothstep(0.0, uEdge, f), 2.4);
-    gl_FragColor = vec4(uColor, g * uOpacity);
-  }
-`;
-
-// Kurenin arkasinda cok hafif lacivert bir isima; siyah zemine derinlik
-// veriyor. Koyu degradede bant olusmasin diye bir bitlik gurultu.
-const BG_VS = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = position.xy * 0.5 + 0.5;
-    gl_Position = vec4(position.xy, 0.0, 1.0);
-  }
-`;
-
-const BG_FS = /* glsl */ `
-  uniform float uAspect;
-  uniform vec3 uColor;
-  uniform float uStrength;
-  varying vec2 vUv;
-  void main() {
-    vec2 p = vUv - 0.5;
-    p.x *= uAspect;
-    float g = (1.0 - smoothstep(0.0, 0.8, length(p))) * uStrength;
+    float soft = 1.0 - smoothstep(0.82, 1.32, length(vP / uR - vec2(0.05, -0.09)));
+    float contact = 1.0 - smoothstep(1.0, 1.05, length(vP) / uR);
     float noise = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-    gl_FragColor = vec4(uColor * g + (noise - 0.5) / 255.0, 1.0);
+    float a = soft * soft * 0.14 + contact * 0.05 + (noise - 0.5) * 0.004;
+    gl_FragColor = vec4(uColor, max(a, 0.0) * uOpacity);
   }
 `;
 
@@ -496,7 +530,7 @@ export function createGlobeScene(container, data, on) {
   }
   const maxPR = Math.min(window.devicePixelRatio || 1, 2);
   renderer.setPixelRatio(maxPR);
-  renderer.setClearColor(0x000000, 1);
+  renderer.setClearColor(0xffffff, 1);
   renderer.domElement.style.width = "100%";
   renderer.domElement.style.height = "100%";
   renderer.domElement.style.display = "block";
@@ -507,6 +541,10 @@ export function createGlobeScene(container, data, on) {
   const group = new THREE.Group();
   scene.add(group);
 
+  // Golgelendiriciler rengi dogrudan ekrana yaziyor; hex'ler dogrusal uzaya
+  // cevrilmeden gitsin ki arayuzdeki CSS renkleriyle (ui.js) birebir ayni olsun.
+  const color = (hex) => new THREE.Color().setHex(hex, THREE.LinearSRGBColorSpace);
+
   const n = data.count;
   const morphUniforms = {
     uMorph: { value: 0 },
@@ -514,11 +552,12 @@ export function createGlobeScene(container, data, on) {
     uR: { value: R },
     uMapK: { value: MAP_K },
     uMapYC: { value: EE_YC },
+    uLight: { value: LIGHT },
   };
   const rampUniforms = {
-    uLow: { value: new THREE.Color(COLORS.low) },
-    uMid: { value: new THREE.Color(COLORS.mid) },
-    uHigh: { value: new THREE.Color(COLORS.high) },
+    uLow: { value: color(COLORS.low) },
+    uMid: { value: color(COLORS.mid) },
+    uHigh: { value: color(COLORS.high) },
   };
   const magUniforms = {
     uLogSpan: { value: Math.log(data.maxPop / 300) },
@@ -526,33 +565,19 @@ export function createGlobeScene(container, data, on) {
     uSel: { value: -1 },
     uCmp: { value: -1 },
   };
-  const cmpColor = { value: new THREE.Color(COLORS.compare) };
+  const cmpColor = { value: color(COLORS.compare) };
+  const inkColor = { value: color(COLORS.ink) };
+  const prUniform = { value: maxPR };
 
-  const backdrop = new THREE.Mesh(
-    new THREE.PlaneGeometry(2, 2),
-    new THREE.ShaderMaterial({
-      uniforms: {
-        uAspect: { value: 1 },
-        uColor: { value: new THREE.Color(COLORS.backdrop) },
-        uStrength: { value: 1 },
-      },
-      vertexShader: BG_VS,
-      fragmentShader: BG_FS,
-      depthTest: false,
-      depthWrite: false,
-    }),
-  );
-  backdrop.frustumCulled = false;
-  backdrop.renderOrder = -1;
-  scene.add(backdrop);
-
-  // --- Kure govdesi ve atmosfer ---
+  // --- Kure govdesi ve golgesi ---
   const body = new THREE.Mesh(
-    new THREE.SphereGeometry(R, 96, 64),
+    new THREE.SphereGeometry(R, 128, 96),
     new THREE.ShaderMaterial({
       uniforms: {
-        uBody: { value: new THREE.Color(COLORS.body) },
-        uRim: { value: new THREE.Color(COLORS.rim) },
+        uLit: { value: color(COLORS.lit) },
+        uShade: { value: color(COLORS.shade) },
+        uRim: { value: color(COLORS.rim) },
+        uLight: morphUniforms.uLight,
       },
       vertexShader: BODY_VS,
       fragmentShader: BODY_FS,
@@ -561,25 +586,23 @@ export function createGlobeScene(container, data, on) {
   body.renderOrder = 0;
   scene.add(body);
 
-  const ATMO_SCALE = 1.16;
-  const atmo = new THREE.Mesh(
-    new THREE.SphereGeometry(R * ATMO_SCALE, 96, 64),
+  // Grupta degil: kure donerken golge yerinde kaliyor.
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(R * 3, R * 3),
     new THREE.ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(COLORS.atmosphere) },
-        uEdge: { value: Math.sqrt(1 - 1 / (ATMO_SCALE * ATMO_SCALE)) },
-        uOpacity: { value: 0.4 },
+        uColor: { value: color(COLORS.shadow) },
+        uOpacity: { value: 1 },
+        uR: { value: R },
       },
-      vertexShader: BODY_VS,
-      fragmentShader: ATMO_FS,
-      side: THREE.BackSide,
+      vertexShader: SHADOW_VS,
+      fragmentShader: SHADOW_FS,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending,
     }),
   );
-  atmo.renderOrder = 1;
-  scene.add(atmo);
+  shadow.renderOrder = 1;
+  scene.add(shadow);
 
   // --- Enlem/boylam cizgileri ---
   const grid = new THREE.LineSegments(
@@ -587,8 +610,8 @@ export function createGlobeScene(container, data, on) {
     new THREE.ShaderMaterial({
       uniforms: {
         ...morphUniforms,
-        uColor: { value: new THREE.Color(COLORS.grid) },
-        uAlpha: { value: 0.09 },
+        uColor: { value: color(COLORS.grid) },
+        uAlpha: { value: 0.08 },
       },
       vertexShader: GRID_VS,
       fragmentShader: GRID_FS,
@@ -608,8 +631,8 @@ export function createGlobeScene(container, data, on) {
   const landMat = new THREE.ShaderMaterial({
     uniforms: {
       ...morphUniforms,
-      uColor: { value: new THREE.Color(COLORS.land) },
-      uAlpha: { value: 0.7 },
+      uColor: { value: color(COLORS.land) },
+      uAlpha: { value: 0.75 },
       uSize: { value: 2 },
     },
     vertexShader: LAND_VS,
@@ -622,21 +645,30 @@ export function createGlobeScene(container, data, on) {
   land.renderOrder = 3;
   group.add(land);
 
-  // --- Sehirler: isik lekesi + (haritada) sutun ---
+  // --- Sehirler: daire + (haritada) sutun ---
+  // Cizim sirasi en kalabalik oldugu yila gore buyukten kucuge: daireler
+  // yari saydam, kucuk sehirler buyuklerin ustunde kalsin. heights sehir
+  // sirasinda (secim ve kart onu okuyor), gpuHeights cizim sirasinda.
+  const peak = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    for (let s = 0; s < data.stride; s++) peak[i] = Math.max(peak[i], data.pops[i * data.stride + s]);
+  }
+  const drawOrder = Array.from({ length: n }, (_, i) => i).sort((a, b) => peak[b] - peak[a]);
   const ll = new Float32Array(n * 2);
   const idx = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    ll[i * 2] = data.lat[i];
-    ll[i * 2 + 1] = data.lon[i];
-    idx[i] = i;
-  }
+  drawOrder.forEach((i, k) => {
+    ll[k * 2] = data.lat[i];
+    ll[k * 2 + 1] = data.lon[i];
+    idx[k] = i;
+  });
   const heights = new Float32Array(n);
+  const gpuHeights = new Float32Array(n);
   const targets = new Float32Array(n);
 
   function cityGeometry() {
     const g = new THREE.InstancedBufferGeometry();
     g.setAttribute("aLL", new THREE.InstancedBufferAttribute(ll, 2));
-    const h = new THREE.InstancedBufferAttribute(heights, 1);
+    const h = new THREE.InstancedBufferAttribute(gpuHeights, 1);
     h.setUsage(THREE.DynamicDrawUsage);
     g.setAttribute("aH", h);
     g.setAttribute("aIdx", new THREE.InstancedBufferAttribute(idx, 1));
@@ -656,15 +688,18 @@ export function createGlobeScene(container, data, on) {
       ...rampUniforms,
       ...magUniforms,
       uCmpColor: cmpColor,
+      uInk: inkColor,
+      uPR: prUniform,
       uDiscR: { value: DISC_R },
       uMinR: { value: 1 },
+      uPpu: { value: 1 },
+      uFill: { value: 0.16 },
       uAlpha: { value: 1 },
     },
     vertexShader: DISC_VS,
     fragmentShader: DISC_FS,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
   });
   const discs = new THREE.Mesh(disc.g, discMat);
   discs.frustumCulled = false;
@@ -683,6 +718,7 @@ export function createGlobeScene(container, data, on) {
       ...rampUniforms,
       ...magUniforms,
       uCmpColor: cmpColor,
+      uInk: inkColor,
       uMaxH: { value: MAX_H },
       uWidth: { value: 2.4 },
       uSpike: { value: 0 },
@@ -691,7 +727,6 @@ export function createGlobeScene(container, data, on) {
     fragmentShader: SPIKE_FS,
     transparent: true,
     depthWrite: false,
-    blending: THREE.AdditiveBlending,
   });
   const spikes = new THREE.Mesh(spike.g, spikeMat);
   spikes.frustumCulled = false;
@@ -707,9 +742,9 @@ export function createGlobeScene(container, data, on) {
   const trailMat = new THREE.ShaderMaterial({
     uniforms: {
       ...morphUniforms,
-      uColor: { value: new THREE.Color(COLORS.centroid) },
+      uColor: inkColor,
       uYear: { value: ESTIMATE_YEAR },
-      uSize: { value: 3 * maxPR },
+      uSize: { value: 2.4 * maxPR },
     },
     vertexShader: TRAIL_VS,
     fragmentShader: TRAIL_FS,
@@ -729,7 +764,7 @@ export function createGlobeScene(container, data, on) {
   const markerMat = new THREE.ShaderMaterial({
     uniforms: {
       ...morphUniforms,
-      uColor: { value: new THREE.Color(COLORS.centroid) },
+      uColor: inkColor,
       uSize: { value: 16 * maxPR },
     },
     vertexShader: MARKER_VS,
@@ -807,7 +842,6 @@ export function createGlobeScene(container, data, on) {
     camera.aspect = st.width / st.height;
     st.shiftX = st.shiftY = -1;
     camera.clearViewOffset();
-    backdrop.material.uniforms.uAspect.value = camera.aspect;
     const freeW = Math.max(1, st.width - st.safeRight);
     const freeH = Math.max(1, st.height - st.safeBottom - st.safeTop);
     // Kure capi bos alanin kisa kenarinin ~%60'i; dikey telefonda
@@ -815,7 +849,7 @@ export function createGlobeScene(container, data, on) {
     const frac = freeW / freeH < 0.8 ? 0.84 : 0.6;
     const minSide = Math.min(freeW, freeH);
     st.dGlobe = (2 * R * st.height) / (frac * minSide) / (2 * tanHalf);
-    // Kure ortada duruyor; lekelerin halesi listeye tasacaksa yalniz o kadar sola.
+    // Kure ortada duruyor; kenari ve golgesi listeye tasacaksa yalniz o kadar sola.
     const reach = (frac * minSide) / 2 + 24;
     st.globeShiftX = Math.min(st.safeRight / 2, Math.max(0, st.width / 2 + reach - freeW));
     // Harita genislige sigiyor; dar ekranda o kadar uzaklasmak her seyi
@@ -832,7 +866,8 @@ export function createGlobeScene(container, data, on) {
 
   const distance = () => (st.dGlobe + (st.dMap - st.dGlobe) * st.e) / st.zoom;
   const pxPerUnit = () => st.height / (2 * distance() * tanHalf);
-  const minDiscR = () => 0.9 / pxPerUnit();
+  // Beyaz uzerinde 1 pikselden kucuk nokta kayboluyor.
+  const minDiscR = () => 1.1 / pxPerUnit();
 
   // --- Yansitma (secim, kart ve etiket konumu icin) ---
   const mvp = new THREE.Matrix4();
@@ -890,7 +925,7 @@ export function createGlobeScene(container, data, on) {
   }
   const cityGeom = (i) => geomLL(data.lat[i], data.lon[i], heights[i] * MAX_H * st.spike, 1.2);
 
-  // Kurede imlecin isik lekesine (kenarina olan uzaklik), haritada sutunun
+  // Kurede imlecin daireye (kenarina olan uzaklik), haritada sutunun
   // taban-tepe dogru parcasina uzakligi.
   const pa = { x: 0, y: 0, ok: false };
   const pb = { x: 0, y: 0, ok: false };
@@ -931,8 +966,8 @@ export function createGlobeScene(container, data, on) {
     return best;
   }
 
-  // Kartin baglanacagi nokta: haritada sutunun tepesi, kurede lekenin ust
-  // kenari (r: lekenin ekrandaki yaricapi).
+  // Kartin baglanacagi nokta: haritada sutunun tepesi, kurede dairenin ust
+  // kenari (r: dairenin ekrandaki yaricapi).
   const anchorOut = { x: 0, y: 0, r: 0, ok: false };
   function anchor(i) {
     if (i < 0 || i >= n) {
@@ -1124,7 +1159,7 @@ export function createGlobeScene(container, data, on) {
     st.panY = clamp(st.panY, -MAP_H / 2, MAP_H / 2);
 
     // Boylar: yil degisince hedefe yumusak yaklasiyor; ilk acilista
-    // lekeler sifirdan buyuyor.
+    // daireler sifirdan buyuyor.
     if (st.heightsDirty) {
       const k = still ? 1 : 1 - Math.pow(1 - 0.14, frames);
       let moving = false;
@@ -1137,6 +1172,7 @@ export function createGlobeScene(container, data, on) {
           heights[i] = targets[i];
         }
       }
+      for (let k2 = 0; k2 < n; k2++) gpuHeights[k2] = heights[drawOrder[k2]];
       disc.h.needsUpdate = true;
       spike.h.needsUpdate = true;
       st.heightsDirty = moving;
@@ -1161,16 +1197,16 @@ export function createGlobeScene(container, data, on) {
     }
     const s = Math.max(0.001, 1 - st.e * 1.6);
     body.scale.setScalar(s);
-    atmo.scale.setScalar(s);
-    atmo.material.uniforms.uOpacity.value = 0.4 * (1 - st.e);
+    shadow.scale.setScalar(s);
+    shadow.material.uniforms.uOpacity.value = 1 - st.e;
     body.visible = s > 0.002;
-    atmo.visible = body.visible;
+    shadow.visible = body.visible;
 
     U.uMorph.value = st.e;
     U.uLon0.value = st.lon0;
     spikeMat.uniforms.uSpike.value = st.spike;
     spikes.visible = st.spike > 0.001;
-    // Haritada lekeler sutunlarin tabani; sutunlar one ciksin diye sonuk.
+    // Haritada daireler sutunlarin tabani; sutunlar one ciksin diye soluk.
     discMat.uniforms.uAlpha.value = 1 - 0.45 * st.e;
 
     // Nokta boyu kara noktalarinin ekrandaki araligindan: yakinlasinca
@@ -1179,8 +1215,9 @@ export function createGlobeScene(container, data, on) {
     const spacing = LAND_STEP * R * ppu;
     landMat.uniforms.uSize.value = clamp(spacing * 0.48, 1.2, 3.6) * maxPR;
     discMat.uniforms.uMinR.value = minDiscR();
-    // Sutun cekirdegi dunya biriminde; ekranda ~1.5 px'ten ince kalmasin.
-    spikeMat.uniforms.uWidth.value = Math.max(2.4, 1.5 / ppu);
+    discMat.uniforms.uPpu.value = ppu * maxPR;
+    // Sutun cekirdegi dunya biriminde; ekranda ~2 px'ten ince kalmasin.
+    spikeMat.uniforms.uWidth.value = Math.max(2.4, 2 / ppu);
 
     updateProjection();
 
@@ -1295,7 +1332,7 @@ export function createGlobeScene(container, data, on) {
       container.removeEventListener("pointerleave", onLeave);
       container.removeEventListener("wheel", onWheel);
       container.style.cursor = "";
-      for (const obj of [backdrop, body, atmo, grid, land, discs, spikes, trail, marker]) {
+      for (const obj of [body, shadow, grid, land, discs, spikes, trail, marker]) {
         obj.geometry.dispose();
         obj.material.dispose();
       }

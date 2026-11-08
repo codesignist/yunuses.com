@@ -7,9 +7,9 @@ export const metadata = experimentMetadata("globe");
 
 export default function GlobePage() {
   return (
-    <main id="main" data-lab-stage className="fixed inset-0 bg-black">
+    <main id="main" data-lab-stage="light" className="fixed inset-0 bg-white">
       <ExperimentSchemas slug="globe" />
-      <LabExitLink />
+      <LabExitLink tone="light" />
 
       <Globe />
     </main>
