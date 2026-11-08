@@ -29,10 +29,10 @@
     "node": ">=20.9"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/postcss": "^4.3.5",
     "gray-matter": "^4.0.3",
-    "hast-util-to-jsx-runtime": "^2.3.6",
-    "next": "^16.4.3",
+    "hast-util-to-jsx-runtime": "^2.3.7",
+    "next": "^16.4.5",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "rehype-external-links": "^3.0.0",
@@ -44,12 +44,12 @@
     "remark-gfm": "^4.0.1",
     "remark-rehype": "^11.1.2",
     "remark-stringify": "^11.0.0",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^4.3.5",
     "three": "^0.187.0",
     "unified": "^11.0.5"
   },
   "devDependencies": {
-    "eslint": "^10.13.0",
-    "eslint-config-next": "^16.4.3"
+    "eslint": "^10.14.0",
+    "eslint-config-next": "^16.4.5"
   }
 }
