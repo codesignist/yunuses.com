@@ -350,3 +350,15 @@ html, body {
 html:has([data-lab-stage]:not([data-lab-stage="light"])) :focus-visible {
   outline-color: #fafafa;
 }
+
+/* /lab/konut grafik renkleri. Iki tonun da her iki zeminde 3:1 kontrasti ve
+   renk korlugu ayrimi dogrulandi (koyu #0a0a0a, acik #ffffff). Mavi secili
+   bolge, turuncu enflasyon; Turkiye karsilastirmasi gri (--color-faint). */
+.konut-viz {
+  --k-s1: #3987e5;
+  --k-s2: #d95926;
+}
+[data-theme="light"] .konut-viz {
+  --k-s1: #2a78d6;
+  --k-s2: #eb6834;
+}

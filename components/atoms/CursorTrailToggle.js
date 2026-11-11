@@ -1,52 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useMediaQuery, useStoredValue, writeStored } from "lib/browserStore";
+
+// İz yalnızca ince imleçli ve hareketi azaltmayan cihazlarda. Tercih
+// localStorage'da; CursorTrailLoader aynı değeri okuyor.
+export const TRAIL_KEY = "cursorTrail";
+export const FINE_POINTER = "(hover: hover) and (pointer: fine)";
+export const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 export default function CursorTrailToggle() {
   const pathname = usePathname();
-  const [enabled, setEnabled] = useState(null);
-  const [supported, setSupported] = useState(false);
-
-  useEffect(() => {
-    const fineHover = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sup = fineHover.matches && !reducedMotion.matches;
-    setSupported(sup);
-    let initial = true;
-    try {
-      const stored = localStorage.getItem("cursorTrail");
-      if (stored === "off") initial = false;
-    } catch {}
-    setEnabled(initial);
-  }, []);
+  const fine = useMediaQuery(FINE_POINTER, false);
+  const reduced = useMediaQuery(REDUCED_MOTION, true);
+  const supported = fine && !reduced;
+  const enabled = useStoredValue(TRAIL_KEY) !== "off";
 
   // Lab'in alt sayfalarında (oyun/deney ekranları) toggle gizli — Lab
   // index sayfasında kalır. Aynı kural CursorTrailLoader içinde de geçerli.
   if (pathname && /^\/lab\/[^/]/.test(pathname)) return null;
   if (!supported) return null;
 
-  const toggle = () => {
-    const next = !enabled;
-    setEnabled(next);
-    try {
-      localStorage.setItem("cursorTrail", next ? "on" : "off");
-    } catch {}
-    window.dispatchEvent(
-      new CustomEvent("cursortrailchange", { detail: next ? "on" : "off" }),
-    );
-  };
-
-  if (enabled === null) {
-    return (
-      <button
-        type="button"
-        aria-label="İmleç izi"
-        data-chrome
-        className="w-9 h-9 shrink-0 rounded-full cursor-pointer"
-      />
-    );
-  }
+  const toggle = () => writeStored(TRAIL_KEY, enabled ? "off" : "on");
 
   return (
     <button

@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 
 const LIGHT_QUERY = "(prefers-color-scheme: light)";
+
+// Tema <html> uzerindeki data-theme'de yasiyor (ThemeInit ilk boyamadan once
+// yaziyor); dugme onu okuyor, ayrica state'te kopyasini tutmuyor. Sunucuda
+// bilinmiyor: hydration'da yer tutucu, hemen sonra gercek ikon.
+const subscribeTheme = (onChange) => {
+  window.addEventListener("themechange", onChange);
+  return () => window.removeEventListener("themechange", onChange);
+};
+const readTheme = () => document.documentElement.getAttribute("data-theme");
+const readThemeOnServer = () => null;
 
 function storedTheme() {
   try {
@@ -20,7 +30,7 @@ function applyTheme(next) {
 
 export default function ThemeToggle() {
   const pathname = usePathname();
-  const [theme, setTheme] = useState(null);
+  const theme = useSyncExternalStore(subscribeTheme, readTheme, readThemeOnServer);
   // Depolama engelliyse seçim kaydedilemiyor; bu oturumda elle seçildiyse
   // sistem teması değişince yine de ezilmesin.
   const chosen = useRef(false);
@@ -34,14 +44,11 @@ export default function ThemeToggle() {
     if (!root.getAttribute("data-theme")) {
       applyTheme(storedTheme() || (media.matches ? "light" : "dark"));
     }
-    setTheme(root.getAttribute("data-theme"));
 
     // Tema hiç seçilmemişse sekme açıkken sistem temasını takip et.
     const onSystemChange = (e) => {
       if (chosen.current || storedTheme()) return;
-      const next = e.matches ? "light" : "dark";
-      applyTheme(next);
-      setTheme(next);
+      applyTheme(e.matches ? "light" : "dark");
     };
     media.addEventListener("change", onSystemChange);
     return () => media.removeEventListener("change", onSystemChange);
@@ -58,7 +65,6 @@ export default function ThemeToggle() {
       localStorage.setItem("theme", next);
     } catch {}
     applyTheme(next);
-    setTheme(next);
   };
 
   if (theme === null) {

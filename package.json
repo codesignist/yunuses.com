@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "favicons": "node scripts/generate-favicons.mjs"
+    "favicons": "node scripts/generate-favicons.mjs",
+    "konut:snapshot": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/konut-snapshot.mjs"
   },
   "repository": {
     "type": "git",
@@ -32,7 +33,7 @@
     "@tailwindcss/postcss": "^4.3.5",
     "gray-matter": "^4.0.3",
     "hast-util-to-jsx-runtime": "^2.3.7",
-    "next": "^16.4.5",
+    "next": "^16.4.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "rehype-external-links": "^3.0.0",
@@ -50,6 +51,6 @@
   },
   "devDependencies": {
     "eslint": "^10.14.0",
-    "eslint-config-next": "^16.4.5"
+    "eslint-config-next": "^16.4.6"
   }
 }

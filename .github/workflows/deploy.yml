@@ -16,6 +16,15 @@ jobs:
       - name: Install dependencies
         run: pnpm i
 
+      # /lab/konut TCMB EVDS'den veri cekiyor. checkout her seferinde calisma
+      # klasorunu temizledigi icin anahtar her dagitimda secret'tan yeniden
+      # yaziliyor; Next bu dosyayi hem derlemede hem next start'ta okuyor.
+      # Secret tanimli degilse sayfa repodaki yedek veriyle calisir.
+      - name: Write runtime env
+        run: printf 'EVDS_API_KEY=%s\n' "$EVDS_API_KEY" > .env.production.local
+        env:
+          EVDS_API_KEY: ${{ secrets.EVDS_API_KEY }}
+
       - name: Build application
         run: pnpm run build
 
