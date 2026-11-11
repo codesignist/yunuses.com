@@ -1,5 +1,14 @@
 [
   {
+    "slug": "konut",
+    "title": "Konut Fiyatları",
+    "tag": "Veri",
+    "date": "2026-11-09",
+    "description": "TCMB'nin Konut Fiyat Endeksi, Türkiye ve 81 il için. Fiyatların enflasyona göre seyrini, kira getirisini ve önümüzdeki 24 ayın tahminini gösteriyor. Kendi ev fiyatını ve kiranı yazıp bugün almakla beklemek arasındaki farkı hesaplayabilirsin. Veri her ay TCMB'den kendiliğinden geliyor.",
+    "cover": "/lab/covers/konut.webp",
+    "shareImage": "/lab/covers/konut.jpg"
+  },
+  {
     "slug": "globe",
     "title": "Globe",
     "tag": "Veri",
