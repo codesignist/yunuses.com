@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import useLabKeys from "lib/useLabKeys";
 import LabOptionBar from "components/molecules/LabOptionBar";
+import { hasWebGL2, markWebGL2Unavailable, useWebGL2 } from "lib/webgl";
 
 const CUBE_HALF = 320;
 const CAM_DIST = 1400;
@@ -144,8 +145,12 @@ export default function Attractors() {
   const containerRef = useRef(null);
   const overlayRef = useRef(null);
   const [active, setActive] = useState("lorenz");
-  const [ready, setReady] = useState(false);
-  const [unsupported, setUnsupported] = useState(false);
+  // Yorunge bir sonraki tikte hesaplaniyor; hangi cekici icin hazir oldugu
+  // tutuluyor, secim degisince "hazir" kendiliginden dusuyor.
+  const [builtFor, setBuiltFor] = useState(null);
+  const ready = builtFor === active;
+  const webgl2 = useWebGL2();
+  const unsupported = !webgl2;
 
   const trajRef = useRef(null);
   const attractorRef = useRef(ATTRACTORS.lorenz);
@@ -159,11 +164,10 @@ export default function Attractors() {
   }, [chromeHidden]);
 
   useEffect(() => {
-    setReady(false);
     const id = setTimeout(() => {
       trajRef.current = buildTrajectory(ATTRACTORS[active]);
       attractorRef.current = ATTRACTORS[active];
-      setReady(true);
+      setBuiltFor(active);
     }, 0);
     return () => clearTimeout(id);
   }, [active]);
@@ -192,11 +196,12 @@ export default function Attractors() {
 
     // WebGL2 acilamayan tarayicida three hata firlatiyor, sayfa Next'in
     // genel hata ekranina dusuyordu. Henuz dinleyici kurulmadi, donmek yeter.
+    if (!webgl2 || !hasWebGL2()) return;
     let renderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true });
     } catch {
-      setUnsupported(true);
+      markWebGL2Unavailable();
       return;
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -507,7 +512,7 @@ export default function Attractors() {
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [webgl2]);
 
   return (
     <div className="absolute inset-0">

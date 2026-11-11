@@ -12,6 +12,15 @@ export default function AvatarLightbox({ origin, onClose }) {
   const [closing, setClosing] = useState(false);
   const closeRef = useRef(null);
 
+  // Efektin içindeki Escape dinleyicisi bunu çağırıyor; tanımı efektten önce.
+  const triggerClose = () => {
+    setClosing((c) => {
+      if (c) return c;
+      setTimeout(onClose, EXIT_DURATION);
+      return true;
+    });
+  };
+
   useEffect(() => {
     closeRef.current?.focus({ preventScroll: true });
 
@@ -41,14 +50,6 @@ export default function AvatarLightbox({ origin, onClose }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const triggerClose = () => {
-    setClosing((c) => {
-      if (c) return c;
-      setTimeout(onClose, EXIT_DURATION);
-      return true;
-    });
-  };
 
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight / 2;

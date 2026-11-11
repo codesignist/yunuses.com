@@ -13,6 +13,7 @@ import { createBreath } from "./breath";
 import { createPost } from "./post";
 import useLabKeys from "lib/useLabKeys";
 import LabOptionBar from "components/molecules/LabOptionBar";
+import { hasWebGL2, markWebGL2Unavailable, useWebGL2 } from "lib/webgl";
 
 const LIGHT_DIR = new THREE.Vector3(440, 290, 320);
 const STYLE_OPTIONS = STYLE_IDS.map((id) => ({ id, label: STYLES[id].label }));
@@ -23,7 +24,8 @@ export default function Dragon() {
   const [active, setActive] = useState("golge");
   const activeRef = useRef("golge");
   const [loading, setLoading] = useState(true);
-  const [unsupported, setUnsupported] = useState(false);
+  const webgl2 = useWebGL2();
+  const unsupported = !webgl2;
 
   useEffect(() => {
     activeRef.current = active;
@@ -65,7 +67,7 @@ export default function Dragon() {
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || !webgl2 || !hasWebGL2()) return;
 
     // WebGL2 acilamayan tarayicida (donanim hizlandirma kapali, GPU kara
     // listede) three hata firlatiyor, sayfa Next'in genel hata ekranina
@@ -77,7 +79,7 @@ export default function Dragon() {
       // hicbir kenari yumusatmadan GPU bellegi yiyordu.
       renderer = new THREE.WebGLRenderer({ antialias: false });
     } catch {
-      setUnsupported(true);
+      markWebGL2Unavailable();
       return;
     }
     const maxPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -316,7 +318,7 @@ export default function Dragon() {
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [webgl2]);
 
   return (
     <div className="absolute inset-0 bg-black">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useStoredValue, writeStored } from "lib/browserStore";
 import TimeChart from "./TimeChart";
 import { compare } from "./decision";
 import { monthLabel, num, pct, tl } from "./format";
@@ -41,6 +41,15 @@ const BASE = {
   costs: 4,
 };
 
+function parseSaved(raw) {
+  try {
+    const v = JSON.parse(raw || "null");
+    return v && typeof v === "object" ? v : {};
+  } catch {
+    return {};
+  }
+}
+
 function verdictFor(p) {
   if (p >= 0.65) return { tone: "wait", title: "Beklemek öne çıkıyor" };
   if (p <= 0.35) return { tone: "buy", title: "Şimdi almak öne çıkıyor" };
@@ -49,23 +58,14 @@ function verdictFor(p) {
 
 export default function Decision({ view, common }) {
   const defaults = defaultsFor(view, common);
-  const [inputs, setInputs] = useState(BASE);
 
-  // Kayitli girdiler yalnizca bu tarayicida; sayfa onlarsiz da calisiyor.
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORE) || "null");
-      if (saved && typeof saved === "object") setInputs((s) => ({ ...s, ...saved }));
-    } catch {}
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORE, JSON.stringify(inputs));
-    } catch {}
-  }, [inputs]);
+  // Girdiler yalnizca bu tarayicida (localStorage); sayfa onlarsiz da
+  // calisiyor. Sunucuda ve hydration'da varsayilanlar.
+  const inputs = { ...BASE, ...parseSaved(useStoredValue(STORE)) };
+  const setInputs = (next) => writeStored(STORE, next ? JSON.stringify(next) : null);
 
   const v = (k) => inputs[k] ?? defaults[k];
-  const set = (k) => (val) => setInputs((s) => ({ ...s, [k]: val }));
+  const set = (k) => (val) => setInputs({ ...inputs, [k]: val });
 
   const price = v("price");
   const loan = inputs.mode === "loan" ? (price * inputs.loanShare) / 100 : 0;
@@ -324,7 +324,7 @@ export default function Decision({ view, common }) {
             </div>
             <button
               type="button"
-              onClick={() => setInputs(BASE)}
+              onClick={() => setInputs(null)}
               className="mt-4 text-meta text-faint underline decoration-line underline-offset-4 hover:text-fg"
             >
               Tümünü varsayılana döndür

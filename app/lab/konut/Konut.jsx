@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useStoredValue, writeStored } from "lib/browserStore";
 import Decision from "./Decision";
 import TimeChart from "./TimeChart";
 import { monthLabel, num, pct } from "./format";
 import { Legend, Section, Segmented, StatTile } from "./parts";
 import { addMonths, unitStats } from "./unit";
 
-const STORE = "konut:gorunum:v1";
+const VIEW_STORE = "konut:gorunum:v1";
 const PROVINCE_STORE = "konut:il";
 const S1 = "var(--k-s1)";
 const S2 = "var(--k-s2)";
@@ -19,80 +20,92 @@ const RANGES = [
   { value: "all", label: "Tümü" },
 ];
 
+function parseJson(raw) {
+  try {
+    const v = JSON.parse(raw || "null");
+    return v && typeof v === "object" ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+// Adresteki ?il= de bir dis depo: geri tusu (popstate) ve sayfanin kendi
+// degistirmesi (URL_EVENT) dinleniyor.
+const URL_EVENT = "konut:adres";
+const subscribeUrl = (onChange) => {
+  window.addEventListener("popstate", onChange);
+  window.addEventListener(URL_EVENT, onChange);
+  return () => {
+    window.removeEventListener("popstate", onChange);
+    window.removeEventListener(URL_EVENT, onChange);
+  };
+};
+const readUrlProvince = () => new URLSearchParams(window.location.search).get("il");
+const readUrlProvinceOnServer = () => null;
+
+function setUrlProvince(slug) {
+  const url = new URL(window.location.href);
+  if (!slug || slug === "tr") url.searchParams.delete("il");
+  else url.searchParams.set("il", slug);
+  window.history.replaceState(null, "", url);
+  window.dispatchEvent(new Event(URL_EVENT));
+}
+
 export default function Konut({ data }) {
   const turkey = data.turkey;
-  const [scale, setScale] = useState("nominal");
-  const [range, setRange] = useState("3");
 
-  // Il secimi. "tr" Turkiye geneli. Bolge verisi gerektiginde iniyor; inene
-  // kadar bir onceki gorunum soluk olarak ekranda kaliyor.
-  const [slug, setSlug] = useState("tr");
-  const [previous, setPrevious] = useState("tr");
-  const [cache, setCache] = useState(() => ({ tr: turkey }));
-  const [failed, setFailed] = useState(null);
-  const inflight = useRef(new Set());
+  // Grafik tercihleri localStorage'da; sunucuda ve hydration'da varsayilan.
+  const viewPrefs = parseJson(useStoredValue(VIEW_STORE));
+  const scale = viewPrefs.scale === "real" ? "real" : "nominal";
+  const range = RANGES.some((r) => r.value === viewPrefs.range) ? viewPrefs.range : "3";
+  const setView = (patch) => writeStored(VIEW_STORE, JSON.stringify({ scale, range, ...patch }));
 
   const provinceOf = (s) => (s === "tr" ? null : data.provinces.find((p) => p.slug === s));
   const regionOf = (s) => provinceOf(s)?.region ?? "tr";
+  const valid = (s) => Boolean(s) && (s === "tr" || Boolean(provinceOf(s)));
 
-  const load = (regionId) => {
-    if (cache[regionId] || inflight.current.has(regionId)) return;
-    inflight.current.add(regionId);
-    fetch(`/lab/konut/veri/${regionId}/`)
+  // Gosterilecek il: adresteki ?il=, yoksa kayitli secim, yoksa Turkiye.
+  // Adres kayitli secimden once gelir ama onu ezmez: paylasilan bir baglanti
+  // okurun kendi tercihini degistirmesin. Listeden secince ikisi de yaziliyor.
+  const urlProvince = useSyncExternalStore(subscribeUrl, readUrlProvince, readUrlProvinceOnServer);
+  const storedProvince = useStoredValue(PROVINCE_STORE);
+  const slug = [urlProvince, storedProvince].find(valid) ?? "tr";
+  const urlInvalid = urlProvince != null && !valid(urlProvince);
+
+  // Gecersiz parametre adreste kalmasin.
+  useEffect(() => {
+    if (urlInvalid) setUrlProvince(null);
+  }, [urlInvalid]);
+
+  // Bolge verisi gerektiginde iniyor; inene kadar bir onceki gorunum soluk
+  // olarak ekranda kaliyor.
+  const [cache, setCache] = useState(() => ({ tr: turkey }));
+  const [previous, setPrevious] = useState("tr");
+  const [failed, setFailed] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  const inflight = useRef(new Set());
+  const wantedRegion = regionOf(slug);
+
+  useEffect(() => {
+    if (cache[wantedRegion] || inflight.current.has(wantedRegion)) return;
+    inflight.current.add(wantedRegion);
+    fetch(`/lab/konut/veri/${wantedRegion}/`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((json) => setCache((c) => ({ ...c, [regionId]: json })))
-      .catch(() => setFailed(regionId))
-      .finally(() => inflight.current.delete(regionId));
-  };
+      .then((json) => setCache((c) => ({ ...c, [wantedRegion]: json })))
+      .catch(() => setFailed(wantedRegion))
+      .finally(() => inflight.current.delete(wantedRegion));
+  }, [wantedRegion, cache, attempt]);
 
-  const choose = (next, { remember = true } = {}) => {
-    if (!next || (next !== "tr" && !provinceOf(next))) return;
-    setPrevious(cache[regionOf(slug)] ? slug : previous);
-    setSlug(next);
+  const choose = (next) => {
+    if (!valid(next)) return;
+    setPrevious(shownSlug);
     setFailed(null);
-    load(regionOf(next));
-    if (!remember) return;
-    try {
-      localStorage.setItem(PROVINCE_STORE, next);
-    } catch {}
-    const url = new URL(window.location.href);
-    if (next === "tr") url.searchParams.delete("il");
-    else url.searchParams.set("il", next);
-    window.history.replaceState(null, "", url);
+    writeStored(PROVINCE_STORE, next);
+    setUrlProvince(next);
   };
 
-  // Adresteki ?il= kayitli secimden once gelir ama onu ezmez: paylasilan bir
-  // baglanti okurun kendi tercihini degistirmesin.
-  useEffect(() => {
-    let saved = null;
-    let stored = null;
-    try {
-      saved = JSON.parse(localStorage.getItem(STORE) || "null");
-      stored = localStorage.getItem(PROVINCE_STORE);
-    } catch {}
-    if (saved?.scale) setScale(saved.scale);
-    if (saved?.range) setRange(saved.range);
-    const url = new URL(window.location.href);
-    const fromUrl = url.searchParams.get("il");
-    const valid = (s) => s && (s === "tr" || provinceOf(s));
-    // Gecersiz parametre adreste kalmasin, kayitli secime dusulsun.
-    if (fromUrl && !valid(fromUrl)) {
-      url.searchParams.delete("il");
-      window.history.replaceState(null, "", url);
-    }
-    const target = [fromUrl, stored].find(valid);
-    if (target && target !== "tr") choose(target, { remember: false });
-    // Yalnizca ilk yuklemede.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORE, JSON.stringify({ scale, range }));
-    } catch {}
-  }, [scale, range]);
-
-  const ready = Boolean(cache[regionOf(slug)]);
-  const shownSlug = ready ? slug : previous;
+  const ready = Boolean(cache[wantedRegion]);
+  const shownSlug = ready ? slug : cache[regionOf(previous)] ? previous : "tr";
   const loading = !ready && failed !== regionOf(slug);
   const province = provinceOf(shownSlug);
   const region = cache[regionOf(shownSlug)];
@@ -207,7 +220,7 @@ export default function Konut({ data }) {
               type="button"
               onClick={() => {
                 setFailed(null);
-                load(regionOf(slug));
+                setAttempt((a) => a + 1);
               }}
               className="ml-2 text-fg underline underline-offset-4"
             >
@@ -266,13 +279,13 @@ export default function Konut({ data }) {
               size="sm"
               label="Ölçek"
               value={scale}
-              onChange={setScale}
+              onChange={(v) => setView({ scale: v })}
               options={[
                 { value: "nominal", label: "Nominal" },
                 { value: "real", label: "Reel" },
               ]}
             />
-            <Segmented size="sm" label="Aralık" value={range} onChange={setRange} options={RANGES} />
+            <Segmented size="sm" label="Aralık" value={range} onChange={(v) => setView({ range: v })} options={RANGES} />
           </div>
         </div>
         <div className="mt-4">

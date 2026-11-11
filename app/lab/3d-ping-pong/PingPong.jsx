@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { readStored, useStoredValue, writeStored } from "lib/browserStore";
 
 const BOX_S = 640;
 const BOX_D = 1800;
@@ -57,29 +58,19 @@ const AI_STUN_MS = 280;
 // =====================================================================
 
 let _audioCtx = null;
-let _audioMuted = false;
 
-// Çerezler tamamen engelliyken localStorage'a bakmak bile hata atıyor;
-// typeof kontrolü de bu yüzden try içinde.
-function loadMutedFromStorage() {
-  try {
-    if (typeof localStorage === "undefined") return false;
-    return localStorage.getItem("pingpong_muted") === "1";
-  } catch {
-    return false;
-  }
+// Ses ve mod tercihi localStorage'da. Hem React (düğmeler) hem ses
+// fonksiyonları aynı yerden okuyor; ayrı bir modül değişkeni tutulmuyor.
+// Çerezler engelliyse tercih bu sekme açık kaldıkça bellekte geçerli.
+const MUTED_KEY = "pingpong_muted";
+const MODE_KEY = "pingpong_mode";
+
+function isMuted() {
+  return readStored(MUTED_KEY) === "1";
 }
 
-function persistMuted(m) {
-  try {
-    if (typeof localStorage === "undefined") return;
-    localStorage.setItem("pingpong_muted", m ? "1" : "0");
-  } catch {}
-}
-
-function setAudioMuted(m) {
-  _audioMuted = m;
-  persistMuted(m);
+function storedMode() {
+  return readStored(MODE_KEY) === MODE_SURVIVAL ? MODE_SURVIVAL : MODE_TIME;
 }
 
 function getAudioCtx() {
@@ -100,7 +91,7 @@ function getAudioCtx() {
 // Bu bedel oyunun ortasında, ilk vuruşta değil, tıklama anında ödensin. Safari
 // de sesi ancak bir user gesture içinde açılan ya da uyanan bağlamla çalıyor.
 function wakeAudio() {
-  if (_audioMuted) return;
+  if (isMuted()) return;
   const ctx = getAudioCtx();
   if (ctx && ctx.state === "suspended") {
     try {
@@ -110,7 +101,7 @@ function wakeAudio() {
 }
 
 function blip(freq, duration, type = "sine", gain = 0.14, glide = 0) {
-  if (_audioMuted) return;
+  if (isMuted()) return;
   const ctx = getAudioCtx();
   if (!ctx) return;
   if (ctx.state === "suspended") {
@@ -426,29 +417,14 @@ export default function PingPong() {
   const [running, setRunning] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [mode, setMode] = useState(MODE_TIME);
+  // Sunucuda ve hydration'da varsayılanlar (ses açık, süreli mod); hemen
+  // sonra kayıtlı tercih.
+  const muted = useStoredValue(MUTED_KEY) === "1";
+  const mode = useStoredValue(MODE_KEY) === MODE_SURVIVAL ? MODE_SURVIVAL : MODE_TIME;
   const stateRef = useRef(null);
 
-  useEffect(() => {
-    const m = loadMutedFromStorage();
-    _audioMuted = m;
-    setMuted(m);
-    // mod tercihi de hatırlanıyor — hem React hem mutable state'e yansıt
-    try {
-      const saved = localStorage.getItem("pingpong_mode");
-      if (saved === MODE_SURVIVAL || saved === MODE_TIME) {
-        setMode(saved);
-        if (stateRef.current) stateRef.current.mode = saved;
-      }
-    } catch {}
-  }, []);
-
   const switchMode = (m) => {
-    setMode(m);
-    try {
-      localStorage.setItem("pingpong_mode", m);
-    } catch {}
+    writeStored(MODE_KEY, m);
     // HUD canvas tarafı state.mode'a bakıyor — anında senkronize et ve
     // panel arkasındaki sahneyi bir kez yeniden çizdir
     if (stateRef.current) {
@@ -459,8 +435,7 @@ export default function PingPong() {
 
   const toggleMute = () => {
     const next = !muted;
-    setAudioMuted(next);
-    setMuted(next);
+    writeStored(MUTED_KEY, next ? "1" : "0");
     if (!next) wakeAudio();
   };
 
@@ -469,6 +444,11 @@ export default function PingPong() {
     const canvas = canvasRef.current;
     const wrap = wrapRef.current;
     const ctx = canvas.getContext("2d");
+    // Döngünün saati ve kare kimliği. beginRound da saati sıfırladığı için
+    // onu tanımlayan fonksiyonlardan önce duruyorlar. Saat ilk karede
+    // requestAnimationFrame'in zaman damgasıyla başlıyor.
+    let raf = 0;
+    let last = null;
 
     const state = {
       mouse: { x: 0, y: 0 },
@@ -494,18 +474,9 @@ export default function PingPong() {
       ripples: [],
       gameTime: 0,
       gameOver: false,
-      // mode başlangıç değeri için localStorage'a bak — overlay arkasındaki
-      // HUD ilk frame'de doğru moda göre çizilsin.
-      mode: (() => {
-        try {
-          const saved =
-            typeof localStorage !== "undefined"
-              ? localStorage.getItem("pingpong_mode")
-              : null;
-          if (saved === MODE_SURVIVAL || saved === MODE_TIME) return saved;
-        } catch {}
-        return MODE_TIME;
-      })(),
+      // Kayıtlı mod: overlay arkasındaki HUD ilk frame'de doğru moda göre
+      // çizilsin.
+      mode: storedMode(),
       lives: SURVIVAL_LIVES,
       bullets: [],
       bulletCooldownT: 0,
@@ -969,14 +940,12 @@ export default function PingPong() {
       }
     }
 
-    let raf = 0;
-    let last = performance.now();
-
     function tick(now) {
       raf = requestAnimationFrame(tick);
       // Süre gerçek geçen zamanla akar; 250 ms sınırı sekmeye dönüşteki
       // büyük boşluk için. Yavaş cihazda tur uzamasın, skorlar
       // karşılaştırılabilir kalsın.
+      if (last === null) last = now;
       const raw = Math.max(0, Math.min(250, now - last));
       last = now;
 
